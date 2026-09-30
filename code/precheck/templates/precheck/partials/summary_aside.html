@@ -1,0 +1,131 @@
+{% load static %}
+<aside class="bg-white border-l border-thin-gray flex flex-col gap-5 min-h-screen sticky top-0 p-6 w-[280px] shrink-0">
+	<h2 class="font-semibold text-[14px] text-dark-blue">Check Summary</h2>
+
+	{% if summary_variant == "result" %}
+	<div class="flex flex-col gap-3 text-[12px] w-full">
+		<div class="flex items-center justify-between gap-3">
+			<p class="text-secondary">Status</p>
+			{% if is_inconsistent %}
+			<span class="bg-[#fee2e2] border border-[#fecaca] text-[#991b1b] text-[10px] font-semibold px-2 py-0.5 rounded">Inconsistent</span>
+			{% else %}
+			<span class="bg-success-bg border border-[#bbf7d0] text-success-text text-[10px] font-semibold px-2 py-0.5 rounded">Completed</span>
+			{% endif %}
+		</div>
+		<div class="flex items-center justify-between gap-3">
+			<p class="text-secondary">Technology</p>
+			<p class="font-medium text-dark-blue text-right">{{ tech_label }}</p>
+		</div>
+		<div class="flex items-center justify-between gap-3">
+			<p class="text-secondary">Site</p>
+			<p class="font-medium text-dark-blue text-right break-all">{{ site }}</p>
+		</div>
+		<div class="flex items-center justify-between gap-3">
+			<p class="text-secondary">Type</p>
+			<p class="font-medium text-dark-blue text-right">
+				{% if pre_check and full_check %}Pre-check + Full Check
+				{% elif pre_check %}Pre-check
+				{% elif full_check %}Full Check
+				{% else %}—{% endif %}
+			</p>
+		</div>
+		{% if snapshot %}
+		<div class="flex items-center justify-between gap-3">
+			<p class="text-secondary">Date</p>
+			<p class="font-medium text-dark-blue text-right">{{ snapshot.processed_at|default:"—" }}</p>
+		</div>
+		{% endif %}
+		<div class="flex items-center justify-between gap-3">
+			<p class="text-secondary">Cells</p>
+			<p class="font-medium text-dark-blue text-right">{{ selected_cells_count }}</p>
+		</div>
+	</div>
+
+	<div class="h-0 w-full border-t border-thin-gray"></div>
+
+	<div class="flex flex-col gap-3 w-full">
+		<p class="font-semibold text-[12px] text-dark-blue">Categories</p>
+		{% if snapshot %}
+		<div class="flex items-center justify-between gap-3 text-[12px]">
+			<div class="flex items-center gap-2">
+				<span class="size-2 rounded-full bg-success"></span>
+				<span class="text-secondary">Configuration OK</span>
+			</div>
+			<span class="font-medium text-dark-blue">{{ snapshot.counts.consistent }}</span>
+		</div>
+		<div class="flex items-center justify-between gap-3 text-[12px]">
+			<div class="flex items-center gap-2">
+				<span class="size-2 rounded-full bg-[#F59E0B]"></span>
+				<span class="text-secondary">Warnings</span>
+			</div>
+			<span class="font-medium text-dark-blue">{{ snapshot.counts.failed }}</span>
+		</div>
+		<div class="flex items-center justify-between gap-3 text-[12px]">
+			<div class="flex items-center gap-2">
+				<span class="size-2 rounded-full bg-danger"></span>
+				<span class="text-secondary">NOK</span>
+			</div>
+			<span class="font-medium text-dark-blue">{{ snapshot.counts.inconsistent }}</span>
+		</div>
+		{% endif %}
+	</div>
+	{% else %}
+	<div class="flex flex-col gap-3 text-[12px] w-full">
+		<div class="flex items-center justify-between gap-3">
+			<p class="text-secondary">Technology</p>
+			<p class="font-medium text-dark-blue text-right">{{ tech_label }}</p>
+		</div>
+		<div class="flex items-center justify-between gap-3">
+			<p class="text-secondary">Site</p>
+			<p class="font-medium text-dark-blue text-right break-all">{{ site }}</p>
+		</div>
+		<div class="flex items-center justify-between gap-3">
+			<p class="text-secondary">Type</p>
+			<p class="font-medium text-dark-blue text-right">
+				{% if pre_check and full_check %}Pre-check + Full Check
+				{% elif pre_check %}Pre-check
+				{% elif full_check %}Full Check
+				{% else %}—{% endif %}
+			</p>
+		</div>
+		<div class="flex items-center justify-between gap-3">
+			<p class="text-secondary">Cells</p>
+			<p class="font-medium text-dark-blue text-right">{{ selected_cells_count }}</p>
+		</div>
+		<div class="flex items-start justify-between gap-3">
+			<p class="text-secondary shrink-0">EP file</p>
+			<p class="font-medium text-dark-blue text-right break-all">{{ job.original_filename }}</p>
+		</div>
+	</div>
+
+	<div class="h-0 w-full border-t border-thin-gray"></div>
+
+	{% if summary_variant == "failure" %}
+	<div class="flex flex-col gap-2 w-full">
+		<p class="text-[12px] text-muted">Status</p>
+		<span class="inline-flex self-start bg-[#fef3c7] text-[#92400e] text-[11px] font-semibold px-2 py-1 rounded">Execution Failed</span>
+		<p class="text-[11px] text-secondary">Processing interrupted</p>
+	</div>
+	{% else %}
+	<div class="bg-background flex flex-col gap-2 items-start p-4 rounded-lg w-full">
+		<p class="font-semibold text-[11px] uppercase text-muted w-full">Next step</p>
+		<div class="flex gap-2 items-center w-full">
+			<img src="{% static 'ep_import/icons/upload-cloud.svg' %}" alt="" class="size-4">
+			<p class="flex-1 font-semibold text-[13px] text-muted">
+				{% if has_precheck_return %}Process the analysis{% else %}Import the pre-check return{% endif %}
+			</p>
+		</div>
+	</div>
+	{% endif %}
+	{% endif %}
+
+	{% if config_url %}
+	<div class="mt-auto flex flex-col gap-2 w-full pt-4">
+		<a href="{{ config_url }}"
+		   class="flex gap-2 items-center text-[13px] font-medium text-primary">
+			<img src="{% static 'ep_import/icons/plus.svg' %}" alt="" class="size-3.5">
+			Start New Check
+		</a>
+	</div>
+	{% endif %}
+</aside>

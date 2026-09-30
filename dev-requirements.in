@@ -1,0 +1,30 @@
+# Runtime pins come from the compiled lock, not from requirements.in.
+-r requirements.txt
+
+# Linting
+ruff
+
+# Testing
+pytest
+pytest-django
+pytest-cov
+
+# Local Development
+django-browser-reload
+django-debug-toolbar
+django-debug-toolbar
+pydevd-pycharm
+debugpy
+invoke
+
+# Documentation
+mkdocs
+mkdocs-material
+mkdocs-glightbox
+mkdocstrings[python]
+
+# Tooling
+cookiecutter
+pre-commit
+pip-tools
+ruff

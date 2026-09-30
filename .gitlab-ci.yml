@@ -1,0 +1,106 @@
+stages:
+  - lint
+  - test
+  - build
+
+# One pipeline per push: prefer the MR pipeline when an MR is open (avoids a
+# branch pipeline with lint/test and a separate MR pipeline with only build).
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+variables:
+  DOCKER_BUILDKIT: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+lint_process:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install pre-commit
+    - pre-commit run --all-files
+
+pip_audit:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install "pip-audit==2.10.1"
+    - pip-audit -r requirements.txt --no-deps --disable-pip --progress-spinner off --cache-dir .pip-audit-cache
+
+secret_detection:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install "detect-secrets==1.5.0"
+    - detect-secrets-hook --baseline .secrets.baseline
+
+pytest:
+  stage: test
+  image: python:3.12
+  variables:
+    DJANGO_SETTINGS_MODULE: claro_rf_check.settings.ci
+    SECRET_KEY: ci-only-gitlab-pipeline-secret  # pragma: allowlist secret
+    USE_OBS_MEDIA: "False"
+    CORE_CONNECT_SSO_PROJECT_ID: "84791364"
+  before_script:
+    - pip install --upgrade pip
+    - |
+      if [ -n "${GITLAB_PYPI_TOKEN:-}" ]; then
+        export PIP_EXTRA_INDEX_URL="https://gitlab-ci-token:${GITLAB_PYPI_TOKEN}@gitlab.com/api/v4/projects/${CORE_CONNECT_SSO_PROJECT_ID}/packages/pypi/simple"
+      elif [ -n "${CI_JOB_TOKEN:-}" ]; then
+        export PIP_EXTRA_INDEX_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/api/v4/projects/${CORE_CONNECT_SSO_PROJECT_ID}/packages/pypi/simple"
+      fi
+    - pip install -r requirements.txt -r dev-requirements.txt
+  script:
+    - pytest -q --tb=short
+
+# Production-stage image (gunicorn / baked static). Push to Huawei SWR when
+# SWR_REGISTRY, SWR_USERNAME, SWR_PASSWORD (optional SWR_NAMESPACE) are set
+# as CI/CD variables.
+build_image:
+  stage: build
+  image: docker:27-cli
+  services:
+    - name: docker:27-dind
+      alias: docker
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_BUILDKIT: "1"
+    IMAGE_NAME: claro-rf-check
+    CORE_CONNECT_SSO_PROJECT_ID: "84791364"
+    GITLAB_PYPI_USER: "gitlab-ci-token"
+  before_script:
+    - docker info
+  script:
+    - |
+      # Prefer a dedicated Package Registry token; fall back to the job token.
+      export GITLAB_PYPI_TOKEN="${GITLAB_PYPI_TOKEN:-${CI_JOB_TOKEN}}"
+      if [ -z "${GITLAB_PYPI_TOKEN}" ]; then
+        echo "GITLAB_PYPI_TOKEN (or CI_JOB_TOKEN) is required to install core-connect-sso."
+        exit 1
+      fi
+      docker build --target prod \
+        --build-arg "CORE_CONNECT_SSO_PROJECT_ID=${CORE_CONNECT_SSO_PROJECT_ID}" \
+        --build-arg "GITLAB_PYPI_USER=${GITLAB_PYPI_USER}" \
+        --secret id=gitlab_pypi_token,env=GITLAB_PYPI_TOKEN \
+        -t "${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}" \
+        -t "${IMAGE_NAME}:staging" \
+        .
+    - |
+      if [ -n "${SWR_REGISTRY:-}" ] && [ -n "${SWR_USERNAME:-}" ] && [ -n "${SWR_PASSWORD:-}" ]; then
+        echo "$SWR_PASSWORD" | docker login -u "$SWR_USERNAME" --password-stdin "$SWR_REGISTRY"
+        NAMESPACE="${SWR_NAMESPACE:-claro-rf-check}"
+        REMOTE="${SWR_REGISTRY}/${NAMESPACE}/${IMAGE_NAME}"
+        docker tag "${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}" "${REMOTE}:${CI_COMMIT_SHORT_SHA}"
+        docker tag "${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}" "${REMOTE}:staging"
+        docker push "${REMOTE}:${CI_COMMIT_SHORT_SHA}"
+        docker push "${REMOTE}:staging"
+      else
+        echo "SWR_* CI variables not set — image built in the job only (not pushed)."
+      fi
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"

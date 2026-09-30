@@ -1,0 +1,41 @@
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = [
+    ".git",
+    ".mypy_cache",
+    ".tox",
+    ".venv",
+    "venv",
+    "_build",
+    "build",
+    "code/static",
+    "code/templates",
+    "code/media",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]
+ignore = ["E203", "E266", "E501", "E402", "F401", "F403", "F405"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["claro_rf_check", "combined", "ep_import", "home", "poscheck", "precheck", "reports", "theme", "tasks"]
+
+[tool.ruff.format]
+line-ending = "lf"
+
+[tool.coverage.run]
+branch = true
+source = ["claro_rf_check", "combined", "ep_import", "home", "poscheck", "precheck", "reports"]
+omit = ["*/migrations/*", "*/tests/*", "*/test_*.py"]
+relative_files = true
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "claro_rf_check.settings.ci"
+pythonpath = [".", "code"]
+testpaths = ["code"]
+python_files = ["test_*.py", "tests_*.py", "*_test.py", "test.py", "tests.py"]

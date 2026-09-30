@@ -1,0 +1,45 @@
+{% load static %}
+<div class="bg-white border-l border-thin-gray flex flex-col gap-6 h-screen sticky top-0 p-6 w-[280px] shrink-0">
+	<p class="font-semibold text-[14px] text-dark-blue w-full">Selection summary</p>
+	<div class="flex flex-col gap-4 w-full text-[13px]">
+		<div>
+			<p class="font-semibold text-[11px] uppercase text-muted">Technology</p>
+			<p class="font-medium text-dark-blue mt-1" x-text="techLabel">{{ tech_label }}</p>
+		</div>
+		<div>
+			<p class="font-semibold text-[11px] uppercase text-muted">EP file</p>
+			<p class="font-medium mt-1 truncate"
+			   :class="epFileNameClass"
+			   x-text="epFileNameDisplay">{{ job.original_filename|default:"--" }}</p>
+		</div>
+		<div>
+			<p class="font-semibold text-[11px] uppercase text-muted">Selected site</p>
+			<p class="font-medium mt-1 truncate"
+			   :class="selectedSiteClass"
+			   x-text="selectedSiteDisplay">--</p>
+		</div>
+		<div>
+			<p class="font-semibold text-[11px] uppercase text-muted">Selected cells</p>
+			<p class="font-medium mt-1"
+			   :class="selectedCellsClass"
+			   x-text="selectedCellsLabel">--</p>
+		</div>
+		<div x-show="showCheckSummary">
+			<p class="font-semibold text-[11px] uppercase text-muted">Check types</p>
+			<p class="font-medium text-dark-blue mt-1">
+				<span x-show="showPreCheckBadge">✓ Pre-check</span>
+				<span x-show="showBothCheckSeparator"> </span>
+				<span x-show="showFullCheckBadge">✓ Full Check</span>
+			</p>
+		</div>
+	</div>
+	<div class="h-0 w-full border-t border-thin-gray"></div>
+	<div class="bg-background flex flex-col gap-2 items-start p-4 rounded-lg w-full">
+		<p class="font-semibold text-[11px] uppercase text-muted w-full">Next step</p>
+		<div class="flex gap-2 items-center w-full">
+			<img src="{% static 'ep_import/icons/file.svg' %}" alt="" class="size-4">
+			<p class="flex-1 font-semibold text-[13px] text-muted"
+			   x-text="nextStepLabel">Waiting for EP file</p>
+		</div>
+	</div>
+</div>

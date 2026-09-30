@@ -1,0 +1,76 @@
+{% load static %}
+<div class="bg-white border border-thin-gray flex flex-col gap-4 items-start p-5 rounded-xl w-full"
+     id="ep-file-card"
+     {% if polling %}
+     hx-get="{% url 'ep_import:job_status' job_id=job.id %}?technology={{ technology }}"
+     hx-trigger="every 1s"
+     hx-target="#ep-workspace"
+     hx-swap="innerHTML"
+     {% endif %}>
+	<p class="font-semibold text-[14px] text-dark-blue w-full">EP file</p>
+
+	{% if not job %}
+	<label class="bg-background border border-dashed border-thin-gray flex flex-col gap-2 items-center justify-center px-4 py-6 rounded-lg w-full cursor-pointer hover:border-primary transition-colors"
+	       @dragover.prevent
+	       @drop.prevent="onDrop">
+		<div class="bg-light-blue flex items-center justify-center rounded-full size-9">
+			<img src="{% static 'ep_import/icons/upload-cloud.svg' %}" alt="" class="size-5">
+		</div>
+		<p class="font-medium text-[13px] text-dark-blue text-center">Drag the EP file here or click to select</p>
+		<p class="font-normal text-[11px] text-muted text-center">Accepted formats: .xlsx (max {{ max_upload_mb }} MB)</p>
+		<input type="file" class="hidden" accept=".xlsx" @change="onFileSelected">
+	</label>
+
+	{% elif job.status == 'failed' %}
+	<div class="w-full rounded-lg border border-thin-gray px-4 py-3 text-[13px]">
+		<p class="font-semibold text-danger">{{ job.error_title|default:"Import error" }}</p>
+		{% if job.issues %}<p class="mt-1 text-secondary">{{ job.issues.0.message }}</p>{% endif %}
+		{% if job.issues|length > 1 %}<p class="mt-1 text-secondary">and {{ job.issues|length|add:"-1" }} more.</p>{% endif %}
+	</div>
+	<button type="button"
+	        class="bg-white border border-thin-gray px-4 py-2 rounded-lg text-[13px] font-semibold text-secondary"
+	        @click="pickFile">Replace file</button>
+	<input type="file" class="hidden" x-ref="fileInput" accept=".xlsx" @change="onFileSelected">
+
+	{% elif job.status == 'pending' or job.status == 'processing' %}
+	<div class="flex items-center justify-between w-full gap-4">
+		<div>
+			<p class="font-medium text-[13px] text-dark-blue">{{ job.original_filename }}</p>
+			<p class="text-[12px] text-muted mt-1">
+				{% if job.stage == 'validating' %}Validating EP file…
+				{% elif job.stage == 'persisting' %}Saving cells…
+				{% else %}Processing EP file…{% endif %}
+				{% if job.rows_total %}
+					{{ job.rows_processed }} / {{ job.rows_total }}
+				{% elif job.rows_processed %}
+					{{ job.rows_processed }} rows
+				{% endif %}
+			</p>
+		</div>
+		<div class="size-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+	</div>
+
+	{% else %}
+	<div class="flex items-center justify-between w-full gap-4">
+		<div class="min-w-0">
+			<p class="font-medium text-[13px] text-dark-blue truncate">{{ job.original_filename }}</p>
+			<p class="text-[12px] text-muted mt-1">
+				{{ tech_count|default:0 }} cells · region {{ job.region|default:"—" }}
+			</p>
+		</div>
+		<button type="button"
+		        class="bg-white border border-thin-gray px-4 py-2 rounded-lg text-[13px] font-semibold text-secondary hover:border-primary shrink-0"
+		        @click="pickFile">Replace file</button>
+		<input type="file" class="hidden" x-ref="fileInput" accept=".xlsx" @change="onFileSelected">
+	</div>
+	{% if job.issues %}
+	<div class="w-full rounded-lg border border-thin-gray px-4 py-3 text-[13px]">
+		<p class="font-semibold text-amber-800">Import completed with warnings</p>
+		<p class="mt-1 text-secondary">{{ job.issues.0.message }}</p>
+		{% if job.issues|length > 1 %}
+		<p class="mt-1 text-secondary">and {{ job.issues|length|add:"-1" }} more.</p>
+		{% endif %}
+	</div>
+	{% endif %}
+	{% endif %}
+</div>

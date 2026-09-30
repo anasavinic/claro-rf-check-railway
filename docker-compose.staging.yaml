@@ -1,0 +1,127 @@
+# Staging stack: Django + Celery + Postgres + Redis only.
+# Do not add pgAdmin, Portainer, Flower, MinIO, or Mailpit here (dev tools stay on docker-compose.dev).
+include:
+  - docker-compose.yaml
+
+services:
+  postgres:
+    image: postgres:14.13
+    container_name: claro_rf_check_postgres_staging
+    env_file: .env.staging
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - network_docker
+    restart: always
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+      timeout: 5s
+
+  redis:
+    image: redis:8.0.2
+    container_name: claro_rf_check_redis_staging
+    restart: always
+    networks:
+      - network_docker
+
+  celery:
+    extends:
+      file: docker-compose.base.yaml
+      service: x-django-base
+    container_name: claro_rf_check_celery_staging
+    env_file: .env.staging
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    restart: always
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    command: celery -A claro_rf_check worker --loglevel=info --concurrency=${CELERY_WORKER_CONCURRENCY:-2}
+    user: celery_user
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:mode=1777
+
+  celery_beat:
+    extends:
+      file: docker-compose.base.yaml
+      service: x-django-base
+    container_name: claro_rf_check_celery_beat_staging
+    env_file: .env.staging
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    user: celery_user
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:mode=1777
+    command: celery -A claro_rf_check beat --loglevel=info
+
+  django:
+    extends:
+      file: docker-compose.base.yaml
+      service: x-django-base
+    container_name: claro_rf_check_staging
+    env_file: .env.staging
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "8007:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    user: app_user
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:mode=1777
+      - /home/app_user/.gunicorn:uid=1000,gid=1000,mode=0700
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    command:
+      [
+        "gunicorn",
+        "claro_rf_check.wsgi:application",
+        "--bind",
+        "0.0.0.0:8000",
+        "--workers",
+        "${GUNICORN_WORKERS:-3}",
+        "--timeout",
+        "${GUNICORN_TIMEOUT:-60}",
+        "--access-logfile",
+        "-",
+        "--error-logfile",
+        "-",
+      ]

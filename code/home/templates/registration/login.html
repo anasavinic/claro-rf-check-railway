@@ -1,0 +1,29 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Sign in · Claro RF Check</title>
+	<link rel="stylesheet" href="{% static 'css/dist/styles.css' %}">
+</head>
+<body class="bg-background min-h-screen flex items-center justify-center p-6">
+	<form method="post" class="bg-white border border-thin-gray rounded-xl p-6 w-full max-w-sm flex flex-col gap-4">
+		{% csrf_token %}
+		<p class="font-semibold text-[16px] text-dark-blue">Sign in</p>
+		<p class="text-[13px] text-secondary">EP files and results are visible only to the account that imported them.</p>
+		{% if form.errors %}
+		<p class="text-[13px] text-danger">Invalid username or password.</p>
+		{% endif %}
+		<label class="flex flex-col gap-1 text-[13px] text-dark-blue">
+			Username
+			<input name="username" autofocus required class="border border-thin-gray rounded-lg px-3 py-2">
+		</label>
+		<label class="flex flex-col gap-1 text-[13px] text-dark-blue">
+			Password
+			<input name="password" type="password" required class="border border-thin-gray rounded-lg px-3 py-2">
+		</label>
+		<button type="submit" class="bg-primary text-white rounded-lg px-4 py-2 text-[13px] font-semibold">Sign in</button>
+	</form>
+</body>
+</html>

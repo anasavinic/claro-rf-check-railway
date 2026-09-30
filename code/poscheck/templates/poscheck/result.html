@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Analysis results — Claro RF Check{% endblock %}
+
+{% block content %}
+{{ snapshot.validations|json_script:"precheck-validations-data" }}
+<div class="bg-background flex items-start min-h-screen"
+     x-data="resultPage"
+     data-total="{{ snapshot.counts.total }}"
+     data-consistent="{{ snapshot.counts.consistent }}"
+     data-inconsistent="{{ snapshot.counts.inconsistent }}"
+     data-failed="{{ snapshot.counts.failed }}"
+     data-export-url="{{ export_url }}"
+     data-email-url="{{ email_url }}">
+	{% include "ep_import/partials/sidebar.html" %}
+
+	<main class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8 self-stretch">
+		<header class="flex flex-col gap-1.5">
+			<p class="font-normal text-[11px] uppercase text-muted">Home &gt; New check &gt; Result</p>
+			<h1 class="font-semibold text-[24px] text-dark-blue">Analysis results</h1>
+			<p class="font-normal text-[14px] text-secondary">Detailed Full Check validation for the selected site.</p>
+		</header>
+
+		{% include "precheck/partials/stepper.html" with step="result" %}
+
+		<div class="flex flex-wrap items-center gap-2">
+			<p class="text-[13px] text-secondary">
+				{{ tech_label }} · {{ site }}{% if snapshot.processed_at %} · {{ snapshot.processed_at }}{% endif %} · Full Check
+			</p>
+			{% if is_inconsistent %}
+			<span class="bg-[#fee2e2] border border-[#fecaca] text-[#991b1b] text-[10px] font-semibold px-2 py-0.5 rounded">Inconsistent</span>
+			{% else %}
+			<span class="bg-success-bg border border-[#bbf7d0] text-success-text text-[10px] font-semibold px-2 py-0.5 rounded">Completed</span>
+			{% endif %}
+		</div>
+
+		<div class="border-thin-gray flex gap-8">
+			{% if pre_check %}
+			<a href="{% url 'precheck:result' technology=technology %}" class="pb-3 px-1 text-[13px] text-muted">Pre-check</a>
+			{% endif %}
+			<span class="border-primary pb-3 px-1 text-[13px] font-medium text-primary">Full Check</span>
+		</div>
+
+		<section class="result-score">
+			<p class="result-score__label">
+				Overall Score:
+				<span class="result-score__value" :class="scoreClass" x-text="scoreLabel">—</span>
+			</p>
+			<span class="result-score__divider" aria-hidden="true"></span>
+			<ul class="result-score__metrics">
+				<li><strong x-text="totalCount">{{ snapshot.counts.total }}</strong> <span>Total</span></li>
+				<li><strong class="is-ok" x-text="consistentCount">{{ snapshot.counts.consistent }}</strong> <span>OK</span></li>
+				<li><strong class="is-warn" x-text="failedCount">{{ snapshot.counts.failed }}</strong> <span>Warnings</span></li>
+				<li><strong class="is-nok" x-text="inconsistentCount">{{ snapshot.counts.inconsistent }}</strong> <span>NOK</span></li>
+			</ul>
+		</section>
+
+		<div class="result-toolbar">
+			<div class="result-filters">
+				<button type="button"
+				        :class="{ 'is-active': filter === 'all' }"
+				        @click="setFilterAll"
+				        x-text="filterAllLabel">All (0)</button>
+				<button type="button"
+				        :class="{ 'is-active': filter === 'ok' }"
+				        @click="setFilterOk"
+				        x-text="filterOkLabel">OK (0)</button>
+				<button type="button"
+				        :class="{ 'is-active': filter === 'failed' }"
+				        @click="setFilterFailed"
+				        x-text="filterFailedLabel">Warnings (0)</button>
+				<button type="button"
+				        :class="{ 'is-active': filter === 'nok' }"
+				        @click="setFilterNok"
+				        x-text="filterNokLabel">NOK (0)</button>
+			</div>
+			<label class="result-search">
+				<img src="{% static 'ep_import/icons/search.svg' %}" alt="">
+				<input type="search"
+				       placeholder="Search parameters..."
+				       @input="onSearch">
+			</label>
+		</div>
+
+		<section class="bg-white border border-thin-gray rounded-xl overflow-hidden">
+			<div class="result-table-scroll">
+				<table class="w-full text-left text-[13px]">
+					<thead class="bg-background text-[12px] text-secondary border-thin-gray sticky top-0 z-10">
+						<tr>
+							<th class="py-3 px-4 font-semibold">Parameter</th>
+							<th class="py-3 px-4 font-semibold">Expected Value</th>
+							<th class="py-3 px-4 font-semibold">Found Value</th>
+							<th class="py-3 px-4 font-semibold">Status</th>
+							<th class="py-3 px-4 font-semibold">Notes</th>
+						</tr>
+					</thead>
+					<tbody>
+						<template x-for="item in visibleRows" :key="item.code + item.label">
+							<tr class="border-[#f5f5f4] last:align-top"
+							    :class="item.isNok ? 'bg-[#fef2f2]' : (item.isFailed ? 'bg-[#fffbeb]' : '')">
+								<td class="py-3 px-4 font-medium text-dark-blue" x-text="item.label"></td>
+								<td class="py-3 px-4 text-secondary" x-text="item.expected"></td>
+								<td class="py-3 px-4"
+								    :class="item.isNok ? 'font-semibold text-[#991b1b]' : (item.isFailed ? 'font-semibold text-[#92400e]' : 'text-dark-blue')"
+								    x-text="item.found"></td>
+								<td class="py-3 px-4">
+									<span x-show="item.isOk"
+									      class="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded bg-success-bg text-success-text border border-[#bbf7d0]">OK</span>
+									<span x-show="item.isFailed"
+									      class="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded bg-[#fef3c7] text-[#92400e] border border-[#fde68a]">Warning</span>
+									<span x-show="item.isNok"
+									      class="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded bg-[#fee2e2] text-[#991b1b] border border-[#fecaca]">NOK</span>
+								</td>
+								<td class="py-3 px-4 text-secondary" x-text="item.note"></td>
+							</tr>
+						</template>
+					</tbody>
+				</table>
+			</div>
+			<div class="border-t border-thin-gray px-4 py-3 text-[11px] text-muted flex flex-wrap items-center gap-2">
+				<span class="font-medium">Files:</span>
+				<span class="border border-thin-gray rounded px-2 py-1 text-secondary">{{ job.original_filename }}</span>
+				{% if full_check_return %}
+				<span class="border border-thin-gray rounded px-2 py-1 text-secondary">{{ full_check_return.original_filename }}</span>
+				{% elif precheck_return %}
+				<span class="border border-thin-gray rounded px-2 py-1 text-secondary">{{ precheck_return.original_filename }}</span>
+				{% endif %}
+			</div>
+			<p class="px-4 pb-3 text-[12px] text-muted" x-show="showEmptyFilter" x-cloak>No validations match the current filter.</p>
+		</section>
+
+		<section class="flex flex-col sm:flex-row gap-3 w-full">
+			{% if can_reanalyze %}
+			<a href="{{ import_returns_url }}"
+			   class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1 hover:border-primary transition-colors">
+				<div class="flex items-center gap-2">
+					<p class="flex-1 font-bold text-[14px] text-dark-blue">Replace MML return</p>
+					<div class="bg-background flex items-center justify-center rounded-lg size-8 shrink-0">
+						<img src="{% static 'ep_import/icons/upload-cloud.svg' %}" alt="" class="size-[18px]">
+					</div>
+				</div>
+				<p class="text-[12px] leading-snug text-secondary">Upload a new Gerência return and reprocess this analysis without changing the EP selection.</p>
+			</a>
+			{% endif %}
+			<div class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1">
+				<div class="flex items-center gap-2">
+					<p class="flex-1 font-bold text-[14px] text-dark-blue">Prepare Email</p>
+					<div class="bg-background flex items-center justify-center rounded-lg size-8 shrink-0">
+						<img src="{% static 'ep_import/icons/mail.svg' %}" alt="" class="size-[18px]">
+					</div>
+				</div>
+				<p class="text-[12px] leading-snug text-secondary">Generate an editable email template based on the results of this analysis.</p>
+				<div class="flex gap-2">
+					<button type="button"
+					        @click="prepareEmail('eml')"
+					        class="px-2.5 py-1 rounded-md border border-thin-gray text-[12px] font-medium text-secondary cursor-pointer hover:border-primary hover:text-primary">.eml</button>
+					<button type="button"
+					        @click="prepareEmail('msg')"
+					        class="px-2.5 py-1 rounded-md border border-thin-gray text-[12px] font-medium text-secondary cursor-pointer hover:border-primary hover:text-primary">.msg</button>
+				</div>
+			</div>
+			<a href="{{ export_url }}"
+			   class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1 hover:border-primary transition-colors">
+				<div class="flex items-center gap-2">
+					<p class="flex-1 font-bold text-[14px] text-dark-blue">Export Report</p>
+					<div class="bg-background flex items-center justify-center rounded-lg size-8 shrink-0">
+						<img src="{% static 'ep_import/icons/download.svg' %}" alt="" class="size-[18px]">
+					</div>
+				</div>
+				<p class="text-[12px] leading-snug text-secondary">Download the generated analysis files.</p>
+			</a>
+			<a href="{{ config_url }}"
+			   class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1 hover:border-primary transition-colors">
+				<div class="flex items-center gap-2">
+					<p class="flex-1 font-bold text-[14px] text-dark-blue">New Check</p>
+					<div class="bg-background flex items-center justify-center rounded-lg size-8 shrink-0">
+						<img src="{% static 'ep_import/icons/plus.svg' %}" alt="" class="size-[18px]">
+					</div>
+				</div>
+				<p class="text-[12px] leading-snug text-secondary">Start a new analysis.</p>
+			</a>
+		</section>
+	</main>
+
+	{% include "precheck/partials/summary_aside.html" with summary_variant="result" %}
+</div>
+{% endblock %}

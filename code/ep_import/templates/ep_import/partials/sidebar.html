@@ -1,0 +1,47 @@
+{% load static %}
+<aside class="bg-white border border-thin-gray flex flex-col gap-2 h-screen sticky top-0 py-5 w-[220px] shrink-0">
+	<div class="flex gap-2 items-center px-5 w-full">
+		<div class="flex items-center justify-center size-6">
+			<img src="{% static 'ep_import/icons/antenna.svg' %}" alt="" class="size-[18px]">
+		</div>
+		<p class="flex-1 font-medium text-[14px] text-dark-blue">Claro RF check</p>
+	</div>
+	<div class="h-4 opacity-0 w-full" aria-hidden="true"></div>
+	<nav class="flex flex-1 flex-col gap-0.5 items-start w-full overflow-y-auto">
+		<a href="{% url 'home:index' %}"
+		   class="flex gap-2 h-9 items-center px-5 w-full {% if active_nav == 'home' %}bg-light-blue border-l-2 border-primary{% else %}border-l-2 border-transparent{% endif %}">
+			<img src="{% static 'ep_import/icons/house.svg' %}" alt="" class="size-4">
+			<span class="flex-1 text-[13px] {% if active_nav == 'home' %}font-medium text-active-text{% else %}font-medium text-secondary{% endif %}">Home</span>
+		</a>
+
+		<div class="flex items-start pb-1 pt-3 px-5 w-full">
+			<p class="flex-1 font-semibold text-[11px] uppercase text-muted">Check by technology</p>
+		</div>
+		{% for tech, label in tech_nav %}
+		<a href="{% url 'ep_import:site_cells' technology=tech %}"
+		   class="flex gap-2 h-9 items-center px-5 w-full {% if active_nav == tech %}bg-light-blue{% endif %}">
+			{% if active_nav == tech %}
+			<img src="{% static 'ep_import/icons/wifi-active.svg' %}" alt="" class="size-4">
+			{% else %}
+			<img src="{% static 'ep_import/icons/wifi.svg' %}" alt="" class="size-4">
+			{% endif %}
+			<span class="flex-1 text-[13px] {% if active_nav == tech %}text-active-text{% else %}text-secondary{% endif %}">{{ label }}</span>
+		</a>
+		{% endfor %}
+
+		<div class="flex items-start pb-1 pt-3 px-5 w-full">
+			<p class="flex-1 font-semibold text-[11px] uppercase text-muted">General</p>
+		</div>
+		<a href="{% url 'combined:configure' %}"
+		   class="flex gap-2 h-9 items-center px-5 w-full {% if active_nav == 'combined' %}bg-light-blue{% endif %}">
+			<img src="{% static 'ep_import/icons/layers3.svg' %}" alt="" class="size-4">
+			<span class="flex-1 text-[13px] {% if active_nav == 'combined' %}text-active-text{% else %}text-secondary{% endif %}">Combined RF check</span>
+		</a>
+		<!-- # History stays hidden until that screen exists.
+		<a href="#" class="flex gap-2 h-9 items-center px-5 w-full">
+			<img src="{% static 'ep_import/icons/clock.svg' %}" alt="" class="size-4">
+			<span class="flex-1 text-[13px] text-secondary">History</span>
+		</a>
+		-->
+	</nav>
+</aside>

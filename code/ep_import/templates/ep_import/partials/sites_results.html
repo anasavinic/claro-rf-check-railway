@@ -1,0 +1,22 @@
+<div class="w-full overflow-y-auto flex-1 min-h-0">
+	<table class="w-full table-fixed text-left">
+		<colgroup>
+			<col class="w-[34%]">
+			<col class="w-[22%]">
+			<col class="w-[22%]">
+			<col class="w-[22%]">
+		</colgroup>
+		<thead>
+			<tr class="text-[11px] font-semibold uppercase text-muted border-thin-gray">
+				<th class="sticky top-0 z-10 bg-white py-2 pr-2 font-semibold">Site</th>
+				<th class="sticky top-0 z-10 bg-white py-2 pr-2 font-semibold">Technology</th>
+				<th class="sticky top-0 z-10 bg-white py-2 pr-2 font-semibold">Cells</th>
+				<th class="sticky top-0 z-10 bg-white py-2 font-semibold">Status</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% include "ep_import/partials/sites_rows.html" %}
+		</tbody>
+	</table>
+</div>
+{% include "ep_import/partials/pager.html" with pager=sites_pager %}

@@ -1,0 +1,607 @@
+LST CELL:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:42
+O&M    #806356339
+%%/*1888682720*/LST CELL:;%%
+RETCODE = 0  Operation succeeded.
+
+Display static parameters of cells
+----------------------------------
+Local Cell ID  Cell Name       Csg indicator  Uplink cyclic prefix length  Downlink cyclic prefix length  NB-IoT Cell Flag  Coverage Level Type  Frequency band  Uplink EARFCN indication  Uplink EARFCN  Downlink EARFCN  Uplink bandwidth  Downlink bandwidth  Cell ID  Physical cell ID  Additional spectrum emission  Cell active state  Cell admin state  Cell Blocking Duration(min)  Cell FDD TDD indication  Subframe assignment  Special subframe patterns  SSP6 DwPTS Mode  Cell Standby Mode  Cell specific offset(dB)  Frequency offset(dB)  Root sequence index  High speed flag      Preamble format  Cell radius(m)  Customized bandwidth configure indicator  Customized uplink bandwidth(0.1MHz)  Customized downlink bandwidth(0.1MHz)  Ue max power allowed configure indicator  Max transmit power allowed(dBm)  Flag of Multi-RRU Cell  Mode of Multi-RRU Cell  CPRI Ethernet Compression Ratio  CPRI Compression  Physical Cell Number of SFN Cell  CRS Port Number  Cell transmission and reception mode  CRS Antenna Port Mapping  User label  Work mode            CN Operator Sharing Group ID  Intra Frequency RAN Sharing Indication  IntraFreq ANR Indication  Cell Radius Start Location(m)  Specified Cell Flag  Downlink Punctured RB Number  SFN Master Cell Label  Multi Cell Share Mode  Standby Cell SFN Recovery Time(h)  Compact Bandwidth Control Interference Mode  Uplink Punctured RB Number Offset  Ultra High-Speed Cell Root Sequence Index
+
+8              43S01PRCLG2101  False          Normal                       Normal                         FALSE             NULL                 28              Not configure             NULL           9610             10M               10M                 8        21                1                             Active             Unblock           NULL                         FDD                      NULL                 NULL                       NULL             Active             0dB                       0dB                   95                   Low speed cell flag  0                7000            Not configure                             NULL                                 NULL                                   Not configure                             NULL                             False                   NULL                    NULL                             No Compression    NULL                              2 ports          2T2R                                  NULL                      NULL        Uplink and downlink  255                           True                                    ALLOWED                   0                              Common Cell          NULL                          NULL                   NORMAL                 NULL                               NULL                                         NULL                               NULL                                     
+9              43S01PRCLG2102  False          Normal                       Normal                         FALSE             NULL                 28              Not configure             NULL           9610             10M               10M                 9        22                1                             Active             Unblock           NULL                         FDD                      NULL                 NULL                       NULL             Active             0dB                       0dB                   205                  Low speed cell flag  0                7000            Not configure                             NULL                                 NULL                                   Not configure                             NULL                             False                   NULL                    NULL                             No Compression    NULL                              2 ports          2T2R                                  NULL                      NULL        Uplink and downlink  255                           True                                    ALLOWED                   0                              Common Cell          NULL                          NULL                   NORMAL                 NULL                               NULL                                         NULL                               NULL                                     
+10             43S01PRCLG2103  False          Normal                       Normal                         FALSE             NULL                 28              Not configure             NULL           9610             10M               10M                 10       23                1                             Active             Unblock           NULL                         FDD                      NULL                 NULL                       NULL             Active             0dB                       0dB                   275                  Low speed cell flag  0                7000            Not configure                             NULL                                 NULL                                   Not configure                             NULL                             False                   NULL                    NULL                             No Compression    NULL                              2 ports          2T2R                                  NULL                      NULL        Uplink and downlink  255                           True                                    ALLOWED                   0                              Common Cell          NULL                          NULL                   NORMAL                 NULL                               NULL                                         NULL                               NULL                                     
+(Number of results = 3)
+
+
+---    END
+
+LST ENODEBFUNCTION:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:43
+O&M    #806356340
+%%/*1888682722*/LST ENODEBFUNCTION:;%%
+RETCODE = 0  Operation succeeded.
+
+List eNodeB Function Configuration
+----------------------------------
+ eNodeB Function Name  =  ES01PRCLG21
+Application Reference  =  1
+            eNodeB ID  =  410545
+           User Label  =  NULL
+         NeRM Version  =  5900LTEDATAV100R020C10SPC260
+      Product Version  =  BTS5900 V100R020C10SPC260
+          eNodeB Mode  =  NORMAL_MODE
+(Number of results = 1)
+
+---    END
+
+LST CNOPERATORTA:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:44
+O&M    #806356343
+%%/*1888682728*/LST CNOPERATORTA:;%%
+RETCODE = 0  Operation succeeded.
+
+List CnOperator Tracking Area
+-----------------------------
+Local tracking area ID  =  0
+        CN Operator ID  =  0
+    Tracking area code  =  41041
+        NB-IoT TA Flag  =  BOOLEAN_FALSE
+(Number of results = 1)
+
+---    END
+
+LST CNOPERATOR:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CNOPERATOR:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST TWAMPRESPONDER:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST TWAMPRESPONDER:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST SCTPHOST:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST SCTPHOST:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST EUTRANINTRAFREQNCELL:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST EUTRANINTRAFREQNCELL:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST EUTRANINTERFREQNCELL:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST EUTRANINTERFREQNCELL:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST UTRANEXTERNALCELLPLMN:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST UTRANEXTERNALCELLPLMN:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST GERANEXTERNALCELL:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST GERANEXTERNALCELL:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST PCCFREQCFG:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST PCCFREQCFG:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST SCCFREQCFG:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST SCCFREQCFG:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+DSP RETSUBUNIT:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/DSP RETSUBUNIT:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST SECTORSPLITCELL:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST SECTORSPLITCELL:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST CSFALLBACKBLINDHOCFG:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CSFALLBACKBLINDHOCFG:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+DSP CELL:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/DSP CELL:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST ALMAF:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST ALMAF:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST NREXTERNALCELL:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST NREXTERNALCELL:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+CHK DATA2LIC:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/CHK DATA2LIC:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST NCELLPLMNLIST:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST NCELLPLMNLIST:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST NRMFBIFREQ:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST NRMFBIFREQ:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST GLOBALPROCSWITCH:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST GLOBALPROCSWITCH:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST NRSCGFREQCONFIG:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST NRSCGFREQCONFIG:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST CELLEMERGENCYAREA:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CELLEMERGENCYAREA:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST RRU:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST RRU:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST RHUB:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST RHUB:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST PRB:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST PRB:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+DSP BRDMFRINFO:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/DSP BRDMFRINFO:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST ENODEBRESMODEALGO:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST ENODEBRESMODEALGO:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST CELLPREALLOCGROUP:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CELLPREALLOCGROUP:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+DSP LICINFO:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/DSP LICINFO:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST CELLOP:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CELLOP:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST EUTRANINTERNFREQ:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST EUTRANINTERNFREQ:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST UTRANNFREQ:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST UTRANNFREQ:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST GERANNFREQGROUP:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST GERANNFREQGROUP:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST GERANNFREQGROUPARFCN:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST GERANNFREQGROUPARFCN:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST GERANNCELL:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST GERANNCELL:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST CAGROUPSCELLCFG:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CAGROUPSCELLCFG:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST CAMGTCFG:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CAMGTCFG:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST CELLALGOSWITCH:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CELLALGOSWITCH:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST CELLHOPARACFG:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CELLHOPARACFG:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST NRNRELATIONSHIP:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST NRNRELATIONSHIP:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST NRNFREQ:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST NRNFREQ:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST NSADCMGMTCONFIG:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST NSADCMGMTCONFIG:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST CELLSIMAP:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CELLSIMAP:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST CELLRACHCECFG:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CELLRACHCECFG:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST CELLDLSCHALGO:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CELLDLSCHALGO:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST EUCELLSECTOREQM:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST EUCELLSECTOREQM:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END
+
+LST CELLRESEL:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:48:45
+O&M    #1
+%%/*1*/LST CELLRESEL:;%%
+RETCODE = 0  Operation succeeded.
+
+(Number of results = 0)
+
+
+---    END

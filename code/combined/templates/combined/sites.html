@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Combined RF — Sites — Claro RF Check{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen"
+     x-data="combinedSites"
+     data-csrf-token="{{ csrf_token }}"
+     data-upload-url="{{ upload_url }}"
+     data-generate-url="{{ generate_url }}"
+     data-job-status-url="{% if job %}{% url 'ep_import:job_status' job_id=job.id %}{% endif %}"
+     data-job-id="{{ job.id|default:'' }}"
+     data-job-status="{{ job.status|default:'' }}"
+     data-ep-file-name="{{ job.original_filename|default:'' }}"
+     data-selected-sites="{{ selected_sites_json }}"
+     data-polling="{% if polling %}true{% else %}false{% endif %}"
+     data-sites-count="{{ sites|length }}">
+	{% include "ep_import/partials/sidebar.html" %}
+
+	<div class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8 self-stretch">
+		<div class="flex flex-col gap-1.5">
+			<p class="font-normal text-[13px] text-muted">Home &gt; Combined RF &gt; Select Sites</p>
+			<h1 class="font-semibold text-[24px] text-dark-blue">Combined RF</h1>
+			<p class="font-normal text-[14px] text-secondary">
+				Combine analyses of different technologies to perform an integrated assessment of the RF environment.
+			</p>
+		</div>
+
+		{% include "combined/partials/stepper.html" with step="sites" %}
+
+		<section class="bg-white border border-thin-gray flex flex-col gap-4 p-5 rounded-xl w-full">
+			<p class="font-semibold text-[14px] text-dark-blue w-full">EP file</p>
+			<p class="font-normal text-[12px] text-secondary -mt-2">Import a regional EP workbook covering the selected technologies.</p>
+
+			<template x-if="!jobId">
+				<label class="bg-background border border-dashed border-thin-gray flex flex-col gap-2 items-center justify-center px-4 py-6 rounded-lg w-full cursor-pointer hover:border-primary transition-colors"
+				       @dragover.prevent
+				       @drop.prevent="onDrop">
+					<div class="bg-light-blue flex items-center justify-center rounded-full size-9">
+						<img src="{% static 'ep_import/icons/upload-cloud.svg' %}" alt="" class="size-5">
+					</div>
+					<p class="font-medium text-[13px] text-dark-blue text-center">Drag the EP file here or click to select</p>
+					<p class="font-normal text-[11px] text-muted text-center">Accepted formats: .xlsx</p>
+					<input type="file" class="hidden" accept=".xlsx" @change="onFileSelected">
+				</label>
+			</template>
+
+			<template x-if="jobId && isProcessing">
+				<div class="flex items-center justify-between w-full gap-4">
+					<div>
+						<p class="font-medium text-[13px] text-dark-blue" x-text="epFileName"></p>
+						<p class="text-[12px] text-muted mt-1" x-text="processingLabel"></p>
+					</div>
+					<div class="size-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+				</div>
+			</template>
+
+			<template x-if="jobId && !isProcessing">
+				<div class="flex items-center justify-between w-full gap-4">
+					<div class="min-w-0">
+						<p class="font-medium text-[13px] text-dark-blue truncate" x-text="epFileName"></p>
+						<p class="text-[12px] text-muted mt-1" x-text="sitesCountLabel"></p>
+					</div>
+					<button type="button"
+					        class="bg-white border border-thin-gray px-4 py-2 rounded-lg text-[13px] font-semibold text-secondary hover:border-primary shrink-0 cursor-pointer"
+					        @click="pickFile">Replace file</button>
+					<input type="file" class="hidden" x-ref="epFileInput" accept=".xlsx" @change="onFileSelected">
+				</div>
+			</template>
+		</section>
+
+		<section class="bg-white border border-thin-gray flex flex-col gap-4 p-5 rounded-xl w-full min-h-0">
+			<div class="flex flex-col gap-1.5">
+				<p class="font-semibold text-[14px] text-dark-blue">Sites found in the EP file</p>
+				<p class="font-normal text-[12px] text-secondary">
+					Select which stations you want to consider for RF consistency rule verification.
+				</p>
+			</div>
+
+			{% if not job %}
+			<p class="text-[13px] text-muted">Upload a successful EP import to list sites.</p>
+			{% elif polling or job.status == 'pending' or job.status == 'processing' %}
+			<p class="text-[13px] text-muted">Waiting for EP import to finish…</p>
+			{% else %}
+			{{ sites|json_script:"combined-sites-data" }}
+			<div class="flex items-center justify-between w-full gap-4 flex-wrap">
+				<input type="search"
+				       class="border border-thin-gray rounded-md px-3 py-2 text-[13px] w-[280px]"
+				       placeholder="Search site by code..."
+				       x-model="search"
+				       @input="onSearchSites">
+				<div class="flex gap-4 items-center">
+					<button type="button" class="text-[13px] font-medium text-primary underline cursor-pointer" @click="selectAllFiltered">Select All</button>
+					<button type="button" class="text-[13px] font-medium text-secondary underline cursor-pointer" @click="clearSelection">Clear Selection</button>
+					<span class="bg-light-blue text-primary text-[12px] font-semibold px-2 py-1 rounded-md" x-text="selectedCountLabel"></span>
+				</div>
+			</div>
+
+			<div class="border border-thin-gray rounded-xl overflow-hidden">
+				<div class="flex flex-col gap-2 p-3 min-h-[280px]">
+					<template x-for="site in pagedSites" :key="site.site_name">
+						<button type="button"
+						        class="flex gap-4 items-center p-3 rounded-lg border text-left w-full transition-colors cursor-pointer"
+						        :class="siteRowClass(site.site_name)"
+						        @click="toggle(site.site_name)">
+							<span class="flex items-center justify-center rounded size-5 shrink-0"
+							      :class="siteCheckboxClass(site.site_name)">
+								<span x-show="isSelected(site.site_name)" class="text-[12px] font-bold">✓</span>
+							</span>
+							<span class="flex-1 flex flex-col gap-1 min-w-0">
+								<span class="font-semibold text-[13px] text-dark-blue truncate" x-text="site.site_name"></span>
+								<span class="flex gap-3 items-center flex-wrap">
+									<span class="flex gap-1">
+										<template x-for="tech in site.technologies" :key="tech">
+											<span class="bg-background border border-thin-gray text-[11px] font-semibold text-secondary px-2 py-0.5 rounded" x-text="tech"></span>
+										</template>
+									</span>
+									<span class="text-[12px] text-secondary" x-text="cellCountLabel(site)"></span>
+								</span>
+							</span>
+						</button>
+					</template>
+					<p class="text-[13px] text-muted px-1 py-2" x-show="showNoSitesMatch" x-cloak>No sites match the current search.</p>
+				</div>
+				<div class="border-t border-thin-gray px-3 py-2 bg-background flex flex-wrap items-center justify-between gap-2">
+					<p class="text-[11px] text-muted" x-text="sitesPagerLabel"></p>
+					<div class="flex items-center gap-2">
+						<button type="button"
+						        class="bg-white border border-thin-gray px-3 py-1.5 rounded-md text-[12px] font-medium text-secondary cursor-pointer disabled:opacity-40"
+						        :disabled="prevPageDisabled"
+						        @click="prevPage">Previous</button>
+						<span class="text-[12px] text-dark-blue font-medium" x-text="pageLabel"></span>
+						<button type="button"
+						        class="bg-white border border-thin-gray px-3 py-1.5 rounded-md text-[12px] font-medium text-secondary cursor-pointer disabled:opacity-40"
+						        :disabled="nextPageDisabled"
+						        @click="nextPage">Next</button>
+					</div>
+				</div>
+			</div>
+			{% endif %}
+		</section>
+
+		<div class="flex items-center justify-between pt-2 w-full">
+			<a href="{% url 'combined:configure' %}" class="border border-thin-gray px-4 py-2.5 rounded-lg text-[14px] font-medium text-secondary">Back</a>
+			<button type="button"
+			        class="px-5 py-2.5 rounded-lg text-[14px] font-medium transition-colors"
+			        :disabled="!canContinue"
+			        :class="canContinue ? 'bg-primary text-white cursor-pointer' : 'bg-disabled text-disabled-text cursor-not-allowed'"
+			        @click="continueNext">
+				<span x-text="generating ? 'Generating…' : 'Continue'"></span>
+			</button>
+		</div>
+	</div>
+
+	{% include "combined/partials/summary.html" with next_step="Generate MML Script" %}
+</div>
+{% endblock %}

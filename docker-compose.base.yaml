@@ -1,0 +1,19 @@
+services:
+  x-django-base:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+      args:
+        CORE_CONNECT_SSO_PROJECT_ID: ${CORE_CONNECT_SSO_PROJECT_ID:-84791364}
+        GITLAB_PYPI_USER: ${GITLAB_PYPI_USER:-gitlab-ci-token}
+      secrets:
+        - gitlab_pypi_token
+    volumes:
+      - ./code:/code
+    extra_hosts:
+      # Reach Core Connect published on the host (INTERNAL_ISSUER)
+      - "host.docker.internal:host-gateway"
+    networks:
+      - network_docker
+    restart: always

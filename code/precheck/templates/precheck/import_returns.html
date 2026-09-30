@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Import results — Claro RF Check{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen"
+     x-data="returnsPage"
+     data-csrf-token="{{ csrf_token }}"
+     data-upload-url="{{ upload_precheck_url }}"
+     data-upload-full-check-url="{{ upload_full_check_url }}"
+     data-process-url="{{ process_url }}"
+     data-requires-precheck="{% if pre_check %}true{% else %}false{% endif %}"
+     data-requires-full-check="{% if full_check %}true{% else %}false{% endif %}"
+     data-has-precheck-return="{% if has_precheck_return %}true{% else %}false{% endif %}"
+     data-has-full-check-return="{% if has_full_check_return %}true{% else %}false{% endif %}"
+     data-precheck-filename="{{ precheck_return.original_filename|default:'' }}"
+     data-full-check-filename="{{ full_check_return.original_filename|default:'' }}">
+	{% include "ep_import/partials/sidebar.html" %}
+
+	<main class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8 self-stretch">
+		<header class="flex flex-col gap-1.5">
+			<p class="font-normal text-[11px] uppercase text-muted">Home &gt; New check &gt; Import results</p>
+			<h1 class="font-semibold text-[20px] text-dark-blue">Import results</h1>
+			<p class="font-normal text-[13px] text-secondary">Upload the Gerência return files for the selected checks.</p>
+		</header>
+
+		{% include "precheck/partials/stepper.html" with step="returns" %}
+
+		<section class="bg-white border border-thin-gray flex flex-col gap-5 p-5 rounded-xl">
+			<div>
+				<h2 class="font-semibold text-[14px] text-dark-blue">Import results</h2>
+				<p class="font-normal text-[12px] text-muted mt-1">Drag the original Gerência outputs or click a zone to select files.</p>
+			</div>
+
+			<div class="grid gap-4 {% if pre_check and full_check %}grid-cols-1 md:grid-cols-2{% else %}grid-cols-1{% endif %}">
+				{% if pre_check %}
+				<div class="border border-dashed border-thin-gray rounded-xl bg-background min-h-[160px] flex flex-col">
+					<div class="px-4 pt-4">
+						<p class="font-semibold text-[13px] text-dark-blue border-l-2 border-primary pl-2">Pre-check result</p>
+						<p class="font-normal text-[11px] text-muted mt-1 pl-2.5">LST GNODEBFUNCTION · LST GNBTRACKINGAREA</p>
+					</div>
+
+					<template x-if="showPrecheckDropzone">
+						{% if can_mutate %}
+						<label class="flex flex-1 flex-col gap-2 items-center justify-center px-4 py-6 cursor-pointer hover:bg-light-blue/40 transition-colors rounded-b-xl"
+						       @dragover.prevent
+						       @drop.prevent="onPrecheckDrop">
+							<div class="bg-light-blue flex items-center justify-center rounded-full size-9">
+								<img src="{% static 'ep_import/icons/upload-cloud.svg' %}" alt="" class="size-[18px]">
+							</div>
+							<p class="font-medium text-[13px] text-dark-blue text-center">Drag or click to upload</p>
+							<p class="font-normal text-[11px] text-muted text-center">.txt, .log (max {{ max_return_mb }} MB)</p>
+							<input type="file" class="hidden" accept=".txt,.log,text/plain" @change="onPrecheckFileSelected">
+						</label>
+						{% else %}
+						<div class="flex flex-1 flex-col gap-2 items-center justify-center px-4 py-6">
+							<p class="font-medium text-[13px] text-muted text-center">View only</p>
+							<p class="font-normal text-[11px] text-muted text-center">You can consult this analysis but not change returns.</p>
+						</div>
+						{% endif %}
+					</template>
+
+					<template x-if="showPrecheckFileCard">
+						<div class="flex flex-1 items-center justify-between gap-3 px-4 py-5">
+							<div class="min-w-0 flex items-start gap-3">
+								<div class="bg-success-bg flex items-center justify-center rounded-full size-9 shrink-0">
+									<img src="{% static 'ep_import/icons/check.svg' %}" alt="" class="size-3">
+								</div>
+								<div class="min-w-0">
+									<p class="font-medium text-[13px] text-dark-blue truncate" x-text="precheckFilename"></p>
+									<p class="text-[12px] text-success-text mt-1">Ready to process</p>
+								</div>
+							</div>
+							{% if can_mutate %}
+							<button type="button"
+							        class="bg-white border border-thin-gray px-3 py-2 rounded-lg text-[12px] font-semibold text-secondary hover:border-primary shrink-0 cursor-pointer"
+							        @click="pickPrecheckFile">Replace</button>
+							<input type="file" class="hidden" x-ref="precheckFileInput" accept=".txt,.log,text/plain" @change="onPrecheckFileSelected">
+							{% endif %}
+						</div>
+					</template>
+				</div>
+				{% endif %}
+
+				{% if full_check %}
+				<div class="border border-dashed border-thin-gray rounded-xl bg-background min-h-[160px] flex flex-col">
+					<div class="px-4 pt-4">
+						<p class="font-semibold text-[13px] text-dark-blue border-l-2 border-primary pl-2">Full Check result</p>
+						<p class="font-normal text-[11px] text-muted mt-1 pl-2.5">Complete Gerência Full Check return</p>
+					</div>
+
+					<template x-if="showFullCheckDropzone">
+						{% if can_mutate %}
+						<label class="flex flex-1 flex-col gap-2 items-center justify-center px-4 py-6 cursor-pointer hover:bg-light-blue/40 transition-colors rounded-b-xl"
+						       @dragover.prevent
+						       @drop.prevent="onFullCheckDrop">
+							<div class="bg-light-blue flex items-center justify-center rounded-full size-9">
+								<img src="{% static 'ep_import/icons/upload-cloud.svg' %}" alt="" class="size-[18px]">
+							</div>
+							<p class="font-medium text-[13px] text-dark-blue text-center">Drag or click to upload</p>
+							<p class="font-normal text-[11px] text-muted text-center">.txt, .log (max {{ max_return_mb }} MB)</p>
+							<input type="file" class="hidden" accept=".txt,.log,text/plain" @change="onFullCheckFileSelected">
+						</label>
+						{% else %}
+						<div class="flex flex-1 flex-col gap-2 items-center justify-center px-4 py-6">
+							<p class="font-medium text-[13px] text-muted text-center">View only</p>
+							<p class="font-normal text-[11px] text-muted text-center">You can consult this analysis but not change returns.</p>
+						</div>
+						{% endif %}
+					</template>
+
+					<template x-if="showFullCheckFileCard">
+						<div class="flex flex-1 items-center justify-between gap-3 px-4 py-5">
+							<div class="min-w-0 flex items-start gap-3">
+								<div class="bg-success-bg flex items-center justify-center rounded-full size-9 shrink-0">
+									<img src="{% static 'ep_import/icons/check.svg' %}" alt="" class="size-3">
+								</div>
+								<div class="min-w-0">
+									<p class="font-medium text-[13px] text-dark-blue truncate" x-text="fullCheckFilename"></p>
+									<p class="text-[12px] text-success-text mt-1">Ready to process</p>
+								</div>
+							</div>
+							{% if can_mutate %}
+							<button type="button"
+							        class="bg-white border border-thin-gray px-3 py-2 rounded-lg text-[12px] font-semibold text-secondary hover:border-primary shrink-0 cursor-pointer"
+							        @click="pickFullCheckFile">Replace</button>
+							<input type="file" class="hidden" x-ref="fullCheckFileInput" accept=".txt,.log,text/plain" @change="onFullCheckFileSelected">
+							{% endif %}
+						</div>
+					</template>
+				</div>
+				{% endif %}
+			</div>
+		</section>
+
+		<div class="flex items-center justify-between w-full gap-3">
+			<a href="{% url 'ep_import:scripts' technology=technology %}"
+			   class="bg-white border border-thin-gray text-dark-blue px-5 py-2.5 rounded-lg text-[14px] font-medium">
+				Back
+			</a>
+			{% if can_mutate %}
+			<button type="button"
+			        class="px-8 py-2.5 rounded-lg text-[14px] font-semibold transition-colors"
+			        :disabled="cannotProcess"
+			        :class="processButtonClass"
+			        @click="processAnalysis">
+				<span x-text="processButtonLabel">Process analysis</span>
+			</button>
+			{% endif %}
+		</div>
+	</main>
+
+	{% include "precheck/partials/summary_aside.html" with summary_variant="returns" %}
+</div>
+{% endblock %}

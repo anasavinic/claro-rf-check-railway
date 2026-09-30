@@ -1,0 +1,44 @@
+{% load static tailwind_tags django_htmx %}
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>{% block title %}Claro RF Check{% endblock %}</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta http-equiv="X-UA-Compatible" content="ie=edge">
+		<meta name="csrf-token" content="{{ csrf_token }}">
+
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+		{% tailwind_css %}
+		{% htmx_script %}
+
+		<script src="{% static 'js/app.js' %}" defer></script>
+		<script src="{% static 'js/vendor/alpinejs-csp-3.15.8.min.js' %}" defer></script>
+
+		{% block extra_head %}{% endblock %}
+	</head>
+
+	<body class="bg-background font-sans antialiased leading-normal tracking-normal"
+	      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+		{% block content %}{% endblock %}
+
+		<div x-data="toast"
+		     x-cloak
+		     x-show="visible"
+		     x-transition.opacity.duration.300ms
+		     @notify.window="show"
+		     class="fixed bottom-6 right-6 z-[1100] max-w-sm bg-white border border-thin-gray rounded-xl shadow-lg px-5 py-4 flex items-start gap-3">
+			<span class="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0"
+			      :class="toastDotClass"></span>
+			<div>
+				<p class="font-poppins font-medium text-dark-blue" x-text="title"></p>
+				<p class="text-sm text-secondary font-opensans" x-text="message"></p>
+			</div>
+		</div>
+
+		{% block extra_body %}{% endblock %}
+	</body>
+</html>

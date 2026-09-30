@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Unable to complete the RF Check — Claro RF Check{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen"
+     x-data="failurePage"
+     data-csrf-token="{{ csrf_token }}"
+     data-process-url="{{ run_again_url }}"
+     data-config-url="{{ config_url }}">
+	{% include "ep_import/partials/sidebar.html" %}
+
+	<main class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8 self-stretch">
+		<header class="flex flex-col gap-1.5">
+			<p class="font-normal text-[11px] uppercase text-muted">Home &gt; New check &gt; 5G NR &gt; Results</p>
+			<h1 class="font-semibold text-[20px] text-dark-blue">Unable to complete the RF Check</h1>
+			<p class="font-normal text-[13px] text-secondary max-w-2xl">
+				The analysis processing was interrupted before results were generated. Uploaded files remain valid and you can try running the check again.
+			</p>
+		</header>
+
+		{% include "precheck/partials/stepper.html" with step="failure" %}
+
+		<div class="flex gap-4 items-start">
+			<div class="bg-[#fef3c7] flex items-center justify-center rounded-[20px] size-10 shrink-0">
+				<img src="{% static 'ep_import/icons/alert-circle.svg' %}" alt="" class="size-5">
+			</div>
+			<div class="flex flex-col gap-2 max-w-xl">
+				<p class="font-medium text-[18px] text-dark-blue">Unable to complete the RF Check</p>
+				<p class="font-normal text-[13px] text-secondary leading-relaxed">
+					The analysis processing was interrupted before results were generated. Uploaded files remain valid and you can try running the check again.
+				</p>
+			</div>
+		</div>
+
+		<section class="bg-white border border-thin-gray rounded-xl p-6 flex flex-col gap-5">
+			<p class="font-medium text-[14px] text-dark-blue">Execution details</p>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+				<div class="flex flex-col gap-4">
+					<div>
+						<p class="text-[12px] uppercase text-muted">Technology</p>
+						<p class="font-medium text-[13px] text-dark-blue mt-1">{{ tech_label }}</p>
+					</div>
+					<div>
+						<p class="text-[12px] uppercase text-muted">Date / time</p>
+						<p class="text-[13px] text-dark-blue mt-1">{{ snapshot.processed_at|default:"—" }}</p>
+					</div>
+					<div>
+						<p class="text-[12px] uppercase text-muted">Status</p>
+						<span class="inline-flex mt-1 bg-[#fef3c7] text-[#92400e] text-[11px] font-semibold px-2.5 py-1 rounded-xl">Interrupted</span>
+					</div>
+				</div>
+				<div class="flex flex-col gap-4">
+					<div>
+						<p class="text-[12px] uppercase text-muted">Site</p>
+						<p class="font-medium text-[13px] text-dark-blue mt-1 break-all">{{ site }}</p>
+					</div>
+					<div>
+						<p class="text-[12px] uppercase text-muted">Cells</p>
+						<p class="text-[13px] text-dark-blue mt-1">{{ selected_cells_count }} selected</p>
+					</div>
+					<div>
+						<p class="text-[12px] uppercase text-muted">Type</p>
+						<p class="text-[13px] text-dark-blue mt-1">Full Check</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="bg-white border border-thin-gray rounded-xl p-6 flex flex-col gap-4">
+			<p class="font-medium text-[14px] text-dark-blue">Reason</p>
+			<p class="font-normal text-[13px] text-secondary leading-relaxed">
+				{{ snapshot.error_detail|default:"An unexpected failure occurred during RF validation processing. No data was compromised and files remain available for a new attempt." }}
+			</p>
+			<button type="button"
+			        class="self-start text-[13px] font-medium text-primary underline cursor-pointer bg-transparent border-0 p-0"
+			        @click="toggleDetails">
+				<span x-text="detailsLabel">View technical details</span>
+			</button>
+			<pre class="mt-1 bg-background border border-thin-gray rounded-lg p-3 overflow-auto whitespace-pre-wrap text-[12px] text-secondary"
+			     x-show="showDetails"
+			     x-cloak>code={{ snapshot.error_code }}
+title={{ snapshot.error_title }}
+detail={{ snapshot.error_detail }}
+processed_at={{ snapshot.processed_at }}</pre>
+		</section>
+
+		<div class="flex flex-wrap items-center gap-3">
+			{% if can_mutate and run_again_url %}
+			<button type="button"
+			        class="bg-primary text-white px-6 py-2.5 rounded-lg text-[14px] font-medium cursor-pointer"
+			        :disabled="running"
+			        @click="runAgain">
+				<span x-text="buttonLabel">Run again</span>
+			</button>
+			{% endif %}
+			<a href="{{ config_url }}"
+			   class="bg-white border border-thin-gray text-dark-blue px-6 py-2.5 rounded-lg text-[14px] font-medium">
+				Back to configuration
+			</a>
+			{% if can_mutate %}
+			<a href="{{ import_returns_url }}"
+			   class="text-[13px] font-medium text-primary">
+				Replace return
+			</a>
+			{% endif %}
+		</div>
+	</main>
+
+	{% include "precheck/partials/summary_aside.html" with summary_variant="failure" %}
+</div>
+{% endblock %}

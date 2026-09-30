@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Combined RF — Scripts — Claro RF Check{% endblock %}
+
+{% block content %}
+{{ returns_board|json_script:"combined-returns-board" }}
+<div class="bg-background flex items-start min-h-screen"
+     x-data="combinedScripts"
+     data-csrf-token="{{ csrf_token }}"
+     data-upload-precheck-url="{{ upload_precheck_url|default:'' }}"
+     data-upload-full-check-url="{{ upload_full_check_url|default:'' }}"
+     data-process-url="{{ process_url|default:'' }}"
+     data-can-import="{% if can_import %}true{% else %}false{% endif %}"
+     data-can-process="{% if can_process %}true{% else %}false{% endif %}"
+     data-script-techs="{% for card in script_cards %}{{ card.technology }}{% if not forloop.last %},{% endif %}{% endfor %}">
+	{% include "ep_import/partials/sidebar.html" %}
+
+	<main class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8 self-stretch">
+		<header class="flex flex-col gap-1.5">
+			<p class="font-normal text-[13px] text-muted">Home &gt; Combined RF &gt; Scripts</p>
+			<h1 class="font-semibold text-[20px] text-dark-blue">Generated Scripts</h1>
+			<p class="font-normal text-[13px] text-secondary">Download each technology script, run it in Gerência, then import the matching return.</p>
+		</header>
+
+		{% include "combined/partials/stepper.html" with step="scripts" %}
+
+		<section class="bg-white border border-thin-gray rounded-xl w-full overflow-hidden">
+			<div class="flex items-center justify-between px-5 py-4 border-b border-thin-gray gap-3">
+				<div>
+					<h2 class="font-semibold text-[14px] text-dark-blue">Scripts by technology</h2>
+					<p class="text-[12px] text-secondary mt-0.5">Collapsed by default — expand only when you need to preview.</p>
+				</div>
+				<button type="button"
+				        class="text-[12px] font-medium text-primary cursor-pointer shrink-0"
+				        @click="toggleAllScripts">
+					<span x-text="allScriptsOpen ? 'Collapse all' : 'Expand all'"></span>
+				</button>
+			</div>
+
+			<div class="divide-y divide-thin-gray">
+				{% for card in script_cards %}
+				<div class="px-5 py-3" data-script-tech="{{ card.technology }}">
+					<div class="flex flex-nowrap items-center justify-between gap-3 min-w-0">
+						<button type="button"
+						        class="flex items-center gap-2 text-left min-w-0 flex-1 overflow-hidden cursor-pointer"
+						        @click="toggleScript('{{ card.technology }}')">
+							<span class="text-muted text-[12px] w-4 shrink-0" x-text="isScriptOpen('{{ card.technology }}') ? '▾' : '▸'"></span>
+							<span class="font-semibold text-[14px] text-dark-blue shrink-0">{{ card.label }}</span>
+							<span class="text-[11px] text-muted truncate hidden sm:inline">
+								{% if card.precheck_script and card.full_check_script %}Pre-check + Full Check
+								{% elif card.precheck_script %}Pre-check
+								{% else %}Full Check{% endif %}
+							</span>
+						</button>
+						<div class="flex flex-nowrap items-center gap-2 shrink-0">
+							{% if card.precheck_script %}
+							<a href="{{ card.download_precheck_url }}"
+							   class="bg-white border border-primary text-primary px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap">
+								Download Pre-check
+							</a>
+							{% endif %}
+							{% if card.full_check_script %}
+							<a href="{{ card.download_full_check_url }}"
+							   class="bg-primary text-white px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap">
+								Download Full Check
+							</a>
+							{% endif %}
+						</div>
+					</div>
+
+					<div class="mt-3 flex flex-col gap-3" x-show="isScriptOpen('{{ card.technology }}')" x-cloak>
+						{% if card.precheck_script %}
+						<div class="flex flex-col gap-2 min-w-0">
+							<div class="flex items-center justify-between">
+								<p class="font-semibold text-[12px] text-dark-blue">Pre-check MML</p>
+								<button type="button"
+								        class="text-[12px] font-medium text-primary cursor-pointer"
+								        @click="copyText($refs.preScript{{ card.technology }}?.textContent || '')">Copy</button>
+							</div>
+							<pre class="bg-[#1f1f1f] text-[#d1fae5] text-[11px] leading-5 overflow-auto p-3 rounded-lg max-h-[160px] whitespace-pre-wrap"
+							     x-ref="preScript{{ card.technology }}">{{ card.precheck_script }}</pre>
+						</div>
+						{% endif %}
+						{% if card.full_check_script %}
+						<div class="flex flex-col gap-2 min-w-0">
+							<div class="flex items-center justify-between">
+								<p class="font-semibold text-[12px] text-dark-blue">Full Check MML</p>
+								<button type="button"
+								        class="text-[12px] font-medium text-primary cursor-pointer"
+								        @click="copyText($refs.fullScript{{ card.technology }}?.textContent || '')">Copy</button>
+							</div>
+							<pre class="bg-[#1f1f1f] text-[#d1fae5] text-[11px] leading-5 overflow-auto p-3 rounded-lg max-h-[160px] whitespace-pre-wrap"
+							     x-ref="fullScript{{ card.technology }}">{{ card.full_check_script }}</pre>
+						</div>
+						{% endif %}
+					</div>
+				</div>
+				{% endfor %}
+			</div>
+		</section>
+
+		{% if can_import %}
+		<section class="bg-white border border-thin-gray flex flex-col gap-4 p-5 rounded-xl">
+			<div>
+				<h2 class="font-semibold text-[14px] text-dark-blue">Import results</h2>
+				<p class="font-normal text-[12px] text-muted mt-1">Drag the Gerência return files or click a zone to select. One file per technology.</p>
+			</div>
+
+			<template x-if="precheckTech">
+				<div class="border border-dashed border-thin-gray rounded-xl bg-background min-h-[160px] flex flex-col">
+					<div class="px-4 pt-4">
+						<p class="font-semibold text-[13px] text-dark-blue border-l-2 border-primary pl-2">Pre-check result · 5G NR</p>
+						<p class="font-normal text-[11px] text-muted mt-1 pl-2.5">5G Pre-check Gerência return</p>
+					</div>
+					<template x-if="!precheckTech.has_precheck">
+						<label class="flex flex-1 flex-col gap-2 items-center justify-center px-4 py-6 cursor-pointer hover:bg-light-blue/40 transition-colors rounded-b-xl"
+						       @dragover.prevent
+						       @drop.prevent="onDrop($event, 'precheck', '5G')">
+							<div class="bg-light-blue flex items-center justify-center rounded-full size-9">
+								<img src="{% static 'ep_import/icons/upload-cloud.svg' %}" alt="" class="size-[18px]">
+							</div>
+							<p class="font-medium text-[13px] text-dark-blue text-center">Drag or click to upload</p>
+							<p class="font-normal text-[11px] text-muted text-center">.txt, .log</p>
+							<input type="file" class="hidden" accept=".txt,.log,text/plain"
+							       @change="onFileSelected($event, 'precheck', '5G')">
+						</label>
+					</template>
+					<template x-if="precheckTech.has_precheck">
+						<div class="flex flex-1 items-center justify-between gap-3 px-4 py-5">
+							<div class="min-w-0 flex items-start gap-3">
+								<div class="bg-success-bg flex items-center justify-center rounded-full size-9 shrink-0">
+									<img src="{% static 'ep_import/icons/check.svg' %}" alt="" class="size-3">
+								</div>
+								<div class="min-w-0">
+									<p class="font-medium text-[13px] text-dark-blue truncate" x-text="precheckTech.precheck_filename"></p>
+									<p class="text-[12px] text-success-text mt-1">Ready to process</p>
+								</div>
+							</div>
+							<button type="button"
+							        class="bg-white border border-thin-gray px-3 py-2 rounded-lg text-[12px] font-semibold text-secondary hover:border-primary shrink-0 cursor-pointer"
+							        @click="pickPrecheck">Replace</button>
+							<input type="file" class="hidden" x-ref="precheckFileInput" accept=".txt,.log,text/plain"
+							       @change="onFileSelected($event, 'precheck', '5G')">
+						</div>
+					</template>
+				</div>
+			</template>
+
+			<div class="grid gap-4 md:grid-cols-2">
+				<template x-for="tech in fullCheckTechs" :key="tech.technology">
+					<div class="border border-dashed border-thin-gray rounded-xl bg-background min-h-[160px] flex flex-col">
+						<div class="px-4 pt-4">
+							<p class="font-semibold text-[13px] text-dark-blue border-l-2 border-primary pl-2"
+							   x-text="'Full Check result · ' + tech.label"></p>
+							<p class="font-normal text-[11px] text-muted mt-1 pl-2.5">Return for this technology only</p>
+						</div>
+						<template x-if="!tech.has_full_check">
+							<label class="flex flex-1 flex-col gap-2 items-center justify-center px-4 py-6 cursor-pointer hover:bg-light-blue/40 transition-colors rounded-b-xl"
+							       @dragover.prevent
+							       @drop.prevent="onDrop($event, 'fullcheck', tech.technology)">
+								<div class="bg-light-blue flex items-center justify-center rounded-full size-9">
+									<img src="{% static 'ep_import/icons/upload-cloud.svg' %}" alt="" class="size-[18px]">
+								</div>
+								<p class="font-medium text-[13px] text-dark-blue text-center">Drag or click to upload</p>
+								<p class="font-normal text-[11px] text-muted text-center">.txt, .log</p>
+								<input type="file" class="hidden" accept=".txt,.log,text/plain"
+								       @change="onFileSelected($event, 'fullcheck', tech.technology)">
+							</label>
+						</template>
+						<template x-if="tech.has_full_check">
+							<div class="flex flex-1 items-center justify-between gap-3 px-4 py-5">
+								<div class="min-w-0 flex items-start gap-3">
+									<div class="bg-success-bg flex items-center justify-center rounded-full size-9 shrink-0">
+										<img src="{% static 'ep_import/icons/check.svg' %}" alt="" class="size-3">
+									</div>
+									<div class="min-w-0">
+										<p class="font-medium text-[13px] text-dark-blue truncate" x-text="tech.full_check_filename"></p>
+										<p class="text-[12px] text-success-text mt-1">Ready to process</p>
+									</div>
+								</div>
+								<button type="button"
+								        class="bg-white border border-thin-gray px-3 py-2 rounded-lg text-[12px] font-semibold text-secondary hover:border-primary shrink-0 cursor-pointer"
+								        @click="pickFullCheck(tech.technology)">Replace</button>
+								<input type="file" class="hidden" accept=".txt,.log,text/plain"
+								       :id="'full-check-input-' + tech.technology"
+								       @change="onFileSelected($event, 'fullcheck', tech.technology)">
+							</div>
+						</template>
+					</div>
+				</template>
+			</div>
+		</section>
+		{% endif %}
+
+		<div class="flex items-center justify-between pt-2">
+			<a href="{% url 'combined:sites' %}" class="bg-white border border-thin-gray text-dark-blue px-5 py-2.5 rounded-lg text-[14px] font-medium">Back</a>
+			{% if can_import %}
+			<button type="button"
+			        class="px-8 py-2.5 rounded-lg text-[14px] font-semibold transition-colors"
+			        :disabled="cannotProcess"
+			        :class="cannotProcess ? 'bg-disabled text-disabled-text cursor-not-allowed' : 'bg-primary text-white cursor-pointer'"
+			        @click="processAnalysis">
+				<span x-text="processing ? 'Processing…' : 'Process analysis'"></span>
+			</button>
+			{% endif %}
+		</div>
+	</main>
+
+	{% include "combined/partials/summary.html" with next_step="Import script results" %}
+</div>
+{% endblock %}

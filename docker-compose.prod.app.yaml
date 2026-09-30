@@ -1,0 +1,108 @@
+# Production APP stack: Django + Celery + Redis.
+# PostgreSQL runs on the dedicated DB ECS (docker-compose.prod.db.yaml).
+
+include:
+  - docker-compose.yaml
+
+services:
+  redis:
+    image: redis:8.0.2
+    container_name: claro_rf_check_redis_prod
+    restart: unless-stopped
+    networks:
+      - network_docker
+
+  celery:
+    extends:
+      file: docker-compose.base.yaml
+      service: x-django-base
+    container_name: claro_rf_check_celery_prod
+    env_file: .env.prod
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_started
+    command: celery -A claro_rf_check worker --loglevel=info --concurrency=${CELERY_WORKER_CONCURRENCY:-2}
+    user: app_user
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:mode=1777
+
+  celery_beat:
+    extends:
+      file: docker-compose.base.yaml
+      service: x-django-base
+    container_name: claro_rf_check_celery_beat_prod
+    env_file: .env.prod
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_started
+    user: app_user
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:mode=1777
+    command: celery -A claro_rf_check beat --loglevel=info
+
+  django:
+    extends:
+      file: docker-compose.base.yaml
+      service: x-django-base
+    container_name: claro_rf_check_prod
+    env_file: .env.prod
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "8007:8000"
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_started
+    user: app_user
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:mode=1777
+      - /home/app_user/.gunicorn:uid=1000,gid=1000,mode=0700
+    command:
+      [
+        "gunicorn",
+        "claro_rf_check.wsgi:application",
+        "--bind",
+        "0.0.0.0:8000",
+        "--workers",
+        "${GUNICORN_WORKERS:-3}",
+        "--timeout",
+        "${GUNICORN_TIMEOUT:-60}",
+        "--access-logfile",
+        "-",
+        "--error-logfile",
+        "-",
+      ]

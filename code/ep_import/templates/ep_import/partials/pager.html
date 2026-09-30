@@ -1,0 +1,21 @@
+{% if pager and pager.page_count > 1 %}
+<nav class="flex items-center justify-between w-full pt-2 text-[12px] text-secondary" aria-label="Pagination">
+	<span>{{ pager.page }} / {{ pager.page_count }}</span>
+	<div class="flex gap-3">
+		{% if pager.has_prev %}
+		<button type="button"
+		        class="font-semibold text-primary"
+		        hx-get="{{ pager.url }}&page={{ pager.page|add:'-1' }}"
+		        hx-target="{{ pager.target }}"
+		        hx-swap="innerHTML">Previous</button>
+		{% endif %}
+		{% if pager.has_next %}
+		<button type="button"
+		        class="font-semibold text-primary"
+		        hx-get="{{ pager.url }}&page={{ pager.page|add:'1' }}"
+		        hx-target="{{ pager.target }}"
+		        hx-swap="innerHTML">Next</button>
+		{% endif %}
+	</div>
+</nav>
+{% endif %}

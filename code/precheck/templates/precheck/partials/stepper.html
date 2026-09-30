@@ -1,0 +1,50 @@
+{% load static %}
+{# step: scripts | returns | result | failure #}
+<div class="flex gap-6 items-center p-4 rounded-xl w-full">
+	<div class="flex gap-2 items-center">
+		<div class="bg-success-bg flex items-center justify-center rounded-xl size-6">
+			<img src="{% static 'ep_import/icons/check.svg' %}" alt="" class="size-3">
+		</div>
+		<p class="font-medium text-[13px] text-success-text">Technology</p>
+	</div>
+	<div class="h-0 w-8 border-t border-thin-gray"></div>
+	<div class="flex gap-2 items-center">
+		<div class="bg-success-bg flex items-center justify-center rounded-xl size-6">
+			<img src="{% static 'ep_import/icons/check.svg' %}" alt="" class="size-3">
+		</div>
+		<p class="font-medium text-[13px] text-success-text">Site and cells</p>
+	</div>
+	<div class="h-0 w-8 border-t border-thin-gray"></div>
+	<div class="flex gap-2 items-center">
+		{% if step == "scripts" %}
+		<div class="bg-primary flex items-center justify-center rounded-xl size-6">
+			<p class="font-bold text-[12px] text-white">3</p>
+		</div>
+		<p class="font-semibold text-[13px] text-primary">Script</p>
+		{% else %}
+		<div class="bg-success-bg flex items-center justify-center rounded-xl size-6">
+			<img src="{% static 'ep_import/icons/check.svg' %}" alt="" class="size-3">
+		</div>
+		<p class="font-medium text-[13px] text-success-text">Script</p>
+		{% endif %}
+	</div>
+	<div class="h-0 w-8 border-t {% if step == 'failure' %}border-[#fcd34d]{% elif step == 'result' or step == 'returns' %}border-primary{% else %}border-thin-gray{% endif %}"></div>
+	<div class="flex gap-2 items-center">
+		{% if step == "failure" %}
+		<div class="bg-[#fef3c7] flex items-center justify-center rounded-xl size-6">
+			<p class="font-bold text-[12px] text-[#92400e]">4</p>
+		</div>
+		<p class="font-semibold text-[13px] text-[#92400e]">Result</p>
+		{% elif step == "result" or step == "returns" %}
+		<div class="bg-primary flex items-center justify-center rounded-xl size-6">
+			<p class="font-bold text-[12px] text-white">4</p>
+		</div>
+		<p class="font-semibold text-[13px] text-primary">Result</p>
+		{% else %}
+		<div class="bg-white border border-thin-gray flex items-center justify-center rounded-xl size-6">
+			<p class="font-semibold text-[12px] text-muted">4</p>
+		</div>
+		<p class="font-medium text-[13px] text-muted">Result</p>
+		{% endif %}
+	</div>
+</div>

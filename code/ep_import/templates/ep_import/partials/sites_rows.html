@@ -1,0 +1,28 @@
+{% for site in sites %}
+<tr class="border-thin-gray cursor-pointer hover:bg-light-blue/50 {% if selected_site == site.site_name %}bg-light-blue{% endif %}"
+    data-site="{{ site.site_name }}"
+    @click="selectSite"
+    hx-get="{% url 'ep_import:job_cells' job_id=job.id %}?technology={{ technology }}&site={{ site.site_name|urlencode }}"
+    hx-target="#cells-panel"
+    hx-swap="innerHTML">
+	<td class="py-3 pr-2 text-[13px] text-dark-blue">
+		<span class="inline-flex items-center gap-2">
+			<span class="size-2.5 rounded-full {% if selected_site == site.site_name %}bg-primary{% else %}bg-thin-gray{% endif %}"></span>
+			{{ site.site_name }}
+		</span>
+	</td>
+	<td class="py-3 pr-2 text-[13px] text-dark-blue">{{ technology }}</td>
+	<td class="py-3 pr-2 text-[13px] text-dark-blue">{{ site.cell_count }}</td>
+	<td class="py-3 text-[13px]">
+		{% if site.status == 'Active' %}
+		<span class="bg-success-bg text-success-text text-[11px] font-semibold px-2 py-1 rounded">Active</span>
+		{% else %}
+		<span class="bg-readonly-gray text-muted text-[11px] font-semibold px-2 py-1 rounded">Inactive</span>
+		{% endif %}
+	</td>
+</tr>
+{% empty %}
+<tr>
+	<td colspan="4" class="py-8 text-center text-[13px] text-secondary">No matching sites.</td>
+</tr>
+{% endfor %}

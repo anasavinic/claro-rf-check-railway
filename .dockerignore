@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Python
+venv
+.venv
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE
+.idea
+.vscode
+
+# Env (never bake secrets into the image context)
+.env
+.env.dev
+.env.staging
+.env.prod
+.env.*
+!.env.dev.example
+!.env.staging.example
+!.env.prod.example
+!.env.railway.example
+
+# Logs / coverage
+*.log
+.coverage
+htmlcov/
+.pip-audit-cache/
+
+# Docs / site / backups (not needed in the app image)
+docs/
+site/
+backups/
+
+# Runtime / build artifacts
+code/media/
+code/staticfiles/
+**/node_modules/
+*.pem
+*.key

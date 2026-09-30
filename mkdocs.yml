@@ -1,0 +1,41 @@
+site_name: Claro RF Check
+
+nav:
+  - Home: index.md
+  - Guides:
+      - EP import: ep-import-guide.md
+      - 5G pre-check: precheck-5g-guide.md
+      - Full Check (pos-check): poscheck-guide.md
+  - Technical reference:
+      - Claro EP schema: ep-schema.md
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/gitlab
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  features:
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - tables
+  - pymdownx.details
+  - pymdownx.superfences

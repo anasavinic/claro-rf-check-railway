@@ -1,0 +1,30 @@
+<aside class="bg-white border-l border-thin-gray flex flex-col gap-6 h-full items-start p-6 shrink-0 w-[280px]">
+	<p class="font-semibold text-[14px] text-dark-blue w-full">Selection Summary</p>
+	<div class="flex flex-col gap-4 items-start w-full">
+		<div class="flex flex-col gap-1 w-full">
+			<p class="font-semibold text-[11px] uppercase text-muted">Type</p>
+			<p class="font-medium text-[13px] text-dark-blue">Combined RF</p>
+		</div>
+		<div class="flex flex-col gap-1 w-full">
+			<p class="font-semibold text-[11px] uppercase text-muted">Technologies</p>
+			<p class="font-medium text-[13px] text-dark-blue">{{ tech_summary|default:"--" }}</p>
+		</div>
+		<div class="flex flex-col gap-1 w-full">
+			<p class="font-semibold text-[11px] uppercase text-muted">Selected sites</p>
+			<p class="font-medium text-[13px] {% if site_count %}text-primary{% else %}text-muted{% endif %}">
+				{% if site_count %}{{ site_count }} site{{ site_count|pluralize }}{% else %}--{% endif %}
+			</p>
+		</div>
+		<div class="flex flex-col gap-1 w-full">
+			<p class="font-semibold text-[11px] uppercase text-muted">Total cells</p>
+			<p class="font-medium text-[13px] {% if cell_count %}text-dark-blue{% else %}text-muted{% endif %}">
+				{% if cell_count %}{{ cell_count }} cell{{ cell_count|pluralize }}{% else %}--{% endif %}
+			</p>
+		</div>
+	</div>
+	<div class="border-t border-thin-gray w-full"></div>
+	<div class="bg-background flex flex-col gap-2 items-start p-4 rounded-lg w-full">
+		<p class="font-semibold text-[11px] uppercase text-muted w-full">Next step</p>
+		<p class="font-semibold text-[13px] text-muted w-full">{{ next_step|default:"Continue" }}</p>
+	</div>
+</aside>

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Combined RF — Failure — Claro RF Check{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen"
+     x-data="failurePage"
+     data-csrf-token="{{ csrf_token }}"
+     data-process-url="{{ process_url }}">
+	{% include "ep_import/partials/sidebar.html" %}
+	<main class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8 self-stretch">
+		<header class="flex flex-col gap-1.5">
+			<p class="font-normal text-[13px] text-muted">Home &gt; Combined RF &gt; Result</p>
+			<h1 class="font-semibold text-[24px] text-dark-blue">Execution failure</h1>
+			<p class="font-normal text-[14px] text-secondary">The combined analysis could not be completed.</p>
+		</header>
+		{% include "combined/partials/stepper.html" with step="result" %}
+		<section class="bg-white border border-thin-gray rounded-xl p-6 flex flex-col gap-4">
+			<p class="font-medium text-[14px] text-dark-blue">Reason</p>
+			{% if failure_reasons %}
+			<ul class="flex flex-col gap-3">
+				{% for reason in failure_reasons %}
+				<li class="text-[13px] text-secondary leading-relaxed">
+					<span class="font-semibold text-dark-blue">{{ reason.technology }} · {{ reason.site_name }}</span>
+					— {{ reason.detail }}
+				</li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<p class="text-[14px] text-secondary">Review the return files and try processing again.</p>
+			{% endif %}
+			<div class="flex gap-3">
+				<a href="{% url 'combined:scripts' %}" class="border border-thin-gray px-4 py-2.5 rounded-lg text-[14px]">Back to scripts</a>
+				<button type="button" class="bg-primary text-white px-4 py-2.5 rounded-lg text-[14px]" @click="runAgain">Run again</button>
+			</div>
+		</section>
+	</main>
+	{% include "combined/partials/summary.html" with next_step="Fix returns and retry" %}
+</div>
+{% endblock %}

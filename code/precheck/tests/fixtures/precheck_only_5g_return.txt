@@ -1,0 +1,37 @@
+LST GNODEBFUNCTION:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:50:32
+O&M    #2689597914
+%%/*1888682850*/LST GNODEBFUNCTION:;%%
+RETCODE = 0  Operation succeeded.
+
+List gNodeB Function
+--------------------
+          gNodeB Function Name  =  GS01PRCLG21
+     Referenced Application ID  =  5
+                     gNodeB ID  =  1060541
+         gNodeB ID Length(bit)  =  27
+                    User Label  =  5G NSA_SA
+Network Resource Model Version  =  5900NRDATAV100R008C10SPC260
+               Product Version  =  BTS5900 V100R020C10SPC260
+(Number of results = 1)
+
+
+---    END
+
+
+LST GNBTRACKINGAREA:;
+S01PRCLG21
++++    S01PRCLG21        2026-09-10 16:50:33
+O&M    #2689597915
+%%/*1888682852*/LST GNBTRACKINGAREA:;%%
+RETCODE = 0  Operation succeeded.
+
+List gNodeB Tracking Area
+-------------------------
+  Tracking Area ID  =  0
+Tracking Area Code  =  4151041
+(Number of results = 1)
+
+
+---    END

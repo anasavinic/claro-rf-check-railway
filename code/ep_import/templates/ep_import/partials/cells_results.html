@@ -1,0 +1,45 @@
+<div class="w-full overflow-y-auto flex-1 min-h-0">
+	<table class="w-full table-fixed text-left">
+		<colgroup>
+			<col class="w-10">
+			<col class="w-[38%]">
+			<col class="w-[16%]">
+			<col class="w-[22%]">
+			<col class="w-[16%]">
+		</colgroup>
+		<thead>
+			<tr class="text-[11px] font-semibold uppercase text-muted border-thin-gray">
+				<th class="sticky top-0 z-10 bg-white py-2 pr-2"></th>
+				<th class="sticky top-0 z-10 bg-white py-2 pr-2">Cell ID</th>
+				<th class="sticky top-0 z-10 bg-white py-2 pr-2">Band</th>
+				<th class="sticky top-0 z-10 bg-white py-2 pr-2">Frequency</th>
+				<th class="sticky top-0 z-10 bg-white py-2">Status</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for cell in cells %}
+			<tr class="border-thin-gray cell-row" data-name="{{ cell.cell_name|lower }}" data-cell="{{ cell.cell_name }}">
+				<td class="py-3 pr-2 align-middle">
+					<input type="checkbox"
+					       class="size-[18px] rounded border-[#d1d1d1] accent-primary"
+					       data-cell="{{ cell.cell_name }}"
+					       @change="toggleCell">
+				</td>
+				<td class="py-3 pr-2 text-[13px] text-dark-blue truncate">{{ cell.cell_name }}</td>
+				<td class="py-3 pr-2 text-[13px] text-dark-blue truncate">{{ cell.band }}</td>
+				<td class="py-3 pr-2 text-[13px] text-dark-blue truncate">{{ cell.frequency }}</td>
+				<td class="py-3 align-middle">
+					{% if cell.status == 'Active' %}
+					<span class="bg-success-bg text-success-text text-[11px] font-semibold px-2 py-1 rounded">Active</span>
+					{% else %}
+					<span class="bg-readonly-gray text-muted text-[11px] font-semibold px-2 py-1 rounded">Inactive</span>
+					{% endif %}
+				</td>
+			</tr>
+			{% empty %}
+			<tr><td colspan="5" class="py-8 text-center text-[13px] text-secondary">No cells found.</td></tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+{% include "ep_import/partials/pager.html" with pager=cells_pager %}
