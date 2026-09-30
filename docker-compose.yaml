@@ -1,4 +1,4 @@
-# Shared networks/volumes/secrets. Django image defaults live in docker-compose.base.yaml
+# Shared networks and volumes. Django image defaults live in docker-compose.base.yaml
 # (referenced only via `extends`, never started as its own container).
 # Volume and network names are prefixed so this stack can run beside Core Connect.
 
@@ -17,7 +17,3 @@ volumes:
     name: claro_rf_check_pgadmin_data
   minio_data:
     name: claro_rf_check_minio_data
-
-secrets:
-  gitlab_pypi_token:
-    environment: GITLAB_PYPI_TOKEN

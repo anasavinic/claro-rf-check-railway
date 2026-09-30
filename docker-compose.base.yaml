@@ -7,8 +7,7 @@ services:
       args:
         CORE_CONNECT_SSO_PROJECT_ID: ${CORE_CONNECT_SSO_PROJECT_ID:-84791364}
         GITLAB_PYPI_USER: ${GITLAB_PYPI_USER:-gitlab-ci-token}
-      secrets:
-        - gitlab_pypi_token
+        GITLAB_PYPI_TOKEN: ${GITLAB_PYPI_TOKEN}
     volumes:
       - ./code:/code
     extra_hosts:

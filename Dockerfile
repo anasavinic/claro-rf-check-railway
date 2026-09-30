@@ -31,17 +31,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ARG CORE_CONNECT_SSO_PROJECT_ID=84791364
 ARG GITLAB_PYPI_USER=gitlab-ci-token
+ARG GITLAB_PYPI_TOKEN
 
 COPY dev-requirements.txt /code/
 
-RUN --mount=type=secret,id=gitlab_pypi_token \
-    set -eu; \
-    TOKEN="$(cat /run/secrets/gitlab_pypi_token)"; \
-    test -n "${TOKEN}"; \
-    REGISTRY="https://${GITLAB_PYPI_USER}:${TOKEN}@gitlab.com/api/v4/projects"; \
-    PACKAGE_INDEX="${REGISTRY}/${CORE_CONNECT_SSO_PROJECT_ID}/packages/pypi/simple"; \
+RUN set -eu; \
+    if [ -z "${GITLAB_PYPI_TOKEN}" ]; then \
+      echo "GITLAB_PYPI_TOKEN is required to install core-connect-sso from the GitLab Package Registry." >&2; \
+      exit 1; \
+    fi; \
     pip install --upgrade pip; \
-    PIP_EXTRA_INDEX_URL="${PACKAGE_INDEX}" \
+    PIP_EXTRA_INDEX_URL="https://${GITLAB_PYPI_USER}:${GITLAB_PYPI_TOKEN}@gitlab.com/api/v4/projects/${CORE_CONNECT_SSO_PROJECT_ID}/packages/pypi/simple" \
         pip install --no-cache-dir -r dev-requirements.txt
 
 COPY ./code /code
