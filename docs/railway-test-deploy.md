@@ -11,7 +11,7 @@ Imports and checks run in background threads inside the web process. Keep the se
 3. Set `GITLAB_PYPI_TOKEN` before the first build. The image installs `core-connect-sso` from the GitLab Package Registry (project `84791364`). Use a token that can read that registry. Railway passes the variable into the Docker build because the Dockerfile declares `ARG GITLAB_PYPI_TOKEN`.
 4. Attach one volume to the web service at `/data` and generate a public domain.
 5. Set `DJANGO_ALLOWED_HOSTS` to that domain and `CSRF_TRUSTED_ORIGINS` to `https://` plus the same domain. Generate strong values for `DJANGO_SECRET_KEY`, the Basic auth pair, and the Django test user. Never commit them.
-6. Confirm pre-deploy runs `migrate` and `ensure_test_user`, then open `/healthz` (no auth) and the site (Basic prompt, then `/accounts/login/`).
+6. On boot the container runs `migrate` and `ensure_test_user` before Gunicorn. Confirm those lines in the deploy log, then open `/healthz` (no auth) and the site (Basic prompt, then `/accounts/login/`).
 
 `RAILWAY_PUBLIC_DOMAIN` is added to `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` when Railway injects it. Set the variables explicitly as well so the first boot is not waiting on that injection.
 

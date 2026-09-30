@@ -107,6 +107,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY ./code /code
 COPY --from=assets /build/code/theme/static /code/theme/static
+COPY scripts/railway-entrypoint.sh /code/railway-entrypoint.sh
+RUN chmod +x /code/railway-entrypoint.sh
 
 # Static files are baked into the image. Uploads live on the Railway volume.
 RUN DJANGO_SETTINGS_MODULE=claro_rf_check.settings.railway \
@@ -116,4 +118,4 @@ RUN DJANGO_SETTINGS_MODULE=claro_rf_check.settings.railway \
 
 EXPOSE 8000
 
-CMD ["/bin/sh", "-c", "mkdir -p \"${MEDIA_ROOT:-/data/media}\" && exec gunicorn claro_rf_check.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers ${GUNICORN_WORKERS:-2} --timeout ${GUNICORN_TIMEOUT:-120} --access-logfile - --error-logfile -"]
+CMD ["/code/railway-entrypoint.sh"]

@@ -6,6 +6,7 @@
   },
   "deploy": {
     "preDeployCommand": "python manage.py migrate --noinput && python manage.py ensure_test_user",
+    "startCommand": "/code/railway-entrypoint.sh",
     "healthcheckPath": "/healthz",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",
