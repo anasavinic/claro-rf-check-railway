@@ -11,6 +11,7 @@ from ep_import.services.scripts import (
     generate_full_check_5g_script,
     generate_full_check_script,
     generate_precheck_5g_script,
+    generate_precheck_script,
 )
 
 
@@ -70,6 +71,16 @@ def test_generate_full_check_4g_script_defaults_enodeb_placeholder():
 
 def test_generate_full_check_script_dispatches_4g():
     assert generate_full_check_script("4G", enodeb_id="99") == generate_full_check_4g_script(enodeb_id="99")
+
+
+def test_exported_script_uses_gerencia_header_and_site_braces():
+    content = generate_full_check_script("5G", site_name="S01GOGNA83")
+    lines = content.splitlines()
+
+    assert lines[0] == "//# --- 5G NR · S01GOGNA83 ---"
+    assert lines[1] == "DSP NRDUCELL:;{S01GOGNA83}"
+    assert lines[-1] == "CHK DATA2LIC:FUNCTIONTYPE=gNodeB;{S01GOGNA83}"
+    assert all(line == lines[0] or line.endswith("{S01GOGNA83}") for line in lines)
 
 
 @pytest.mark.django_db
@@ -146,7 +157,8 @@ def test_download_precheck_script(auth_client):
     )
 
     assert response.status_code == 200
-    assert response.content.decode() == generate_precheck_5g_script()
+    assert response.content.decode() == generate_precheck_script("5G", site_name="SITE_001")
+    assert response.content.decode().splitlines()[0] == "//# --- 5G NR · SITE_001 ---"
     assert response["Content-Disposition"] == 'attachment; filename="Claro_RF_Check_PreCheck_5G.txt"'
 
 
@@ -202,7 +214,7 @@ def test_generate_scripts_4g_full_check(auth_client):
     assert b"LST ENODEBFUNCTION:;" in page.content
     assert b"LST EUTRANINTRAFREQNCELL:ENODEBID=410545;" in page.content
     assert b"LST UCELL" not in page.content
-    expected = generate_full_check_4g_script(enodeb_id="410545")
+    expected = generate_full_check_script("4G", site_name="S01PRCLG21", enodeb_id="410545")
     assert escape(expected).strip().encode() in page.content
     download = auth_client.get(
         reverse(

@@ -214,7 +214,6 @@ def build_scripts(combined: CombinedCheck) -> dict:
             analysis.technology,
             {"precheck_script": "", "full_check_script": "", "label": tech_label(analysis.technology)},
         )
-        header = f"# --- {tech_label(analysis.technology)} · {analysis.site_name} ---"
         if analysis.pre_check:
             script = generate_precheck_script(
                 analysis.technology,
@@ -222,7 +221,7 @@ def build_scripts(combined: CombinedCheck) -> dict:
                 cell_names=analysis.selected_cells or [],
             )
             if script.strip():
-                block = f"{header}\n{script.rstrip()}\n"
+                block = script if script.endswith("\n") else f"{script}\n"
                 precheck_parts.append(block)
                 bucket["precheck_script"] = (
                     f"{bucket['precheck_script']}\n{block}".strip() + "\n" if bucket["precheck_script"] else block
@@ -238,7 +237,7 @@ def build_scripts(combined: CombinedCheck) -> dict:
                 enodeb_id=_enodeb_id_for_analysis(analysis),
             )
             if script.strip():
-                block = f"{header}\n{script.rstrip()}\n"
+                block = script if script.endswith("\n") else f"{script}\n"
                 full_parts.append(block)
                 bucket["full_check_script"] = (
                     f"{bucket['full_check_script']}\n{block}".strip() + "\n" if bucket["full_check_script"] else block

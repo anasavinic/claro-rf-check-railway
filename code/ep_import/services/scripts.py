@@ -410,6 +410,34 @@ def generate_full_check_2g_script(
     return "\n".join(lines) + "\n"
 
 
+def gerencia_script(body: str, *, technology: str, site_name: str) -> str:
+    """Format a script so Gerência can run it.
+
+    The first line must start with ``//``. Each command carries the selected
+    site as ``{SITE}``.
+    """
+    site = site_name.strip()
+    label = {"2G": "2G", "3G": "3G", "4G": "4G LTE", "5G": "5G NR"}.get(technology, technology)
+    header = f"//# --- {label} · {site} ---"
+    suffix = f"{{{site}}}"
+    lines = [header]
+    for line in body.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or stripped.startswith("//"):
+            continue
+        if f"{{{site}}}" not in stripped:
+            stripped = f"{stripped}{suffix}"
+        lines.append(stripped)
+    return "\n".join(lines) + "\n"
+
+
+def _with_site(body: str, *, technology: str, site_name: str) -> str:
+    site = (site_name or "").strip()
+    if not site or not body.strip():
+        return body
+    return gerencia_script(body, technology=technology, site_name=site)
+
+
 def generate_precheck_script(
     technology: str,
     *,
@@ -417,9 +445,9 @@ def generate_precheck_script(
     cell_names: Sequence[str] | None = None,
 ) -> str:
     """Dispatch pre-check script generation by technology (5G only)."""
-    if technology == "5G":
-        return generate_precheck_5g_script()
-    return ""
+    if technology != "5G":
+        return ""
+    return _with_site(generate_precheck_5g_script(), technology=technology, site_name=site_name)
 
 
 def generate_full_check_script(
@@ -434,21 +462,23 @@ def generate_full_check_script(
 ) -> str:
     """Dispatch full-check (pos-check) script generation by technology."""
     if technology == "5G":
-        return generate_full_check_5g_script()
-    if technology == "4G":
-        return generate_full_check_4g_script(enodeb_id=enodeb_id)
-    if technology == "3G":
-        return generate_full_check_3g_script(
+        body = generate_full_check_5g_script()
+    elif technology == "4G":
+        body = generate_full_check_4g_script(enodeb_id=enodeb_id)
+    elif technology == "3G":
+        body = generate_full_check_3g_script(
             site_name=site_name,
             cell_names=cell_names,
             cell_ids=cell_ids,
         )
-    if technology == "2G":
-        return generate_full_check_2g_script(
+    elif technology == "2G":
+        body = generate_full_check_2g_script(
             bsc=bsc,
             bts=bts or site_name,
             site_name=site_name,
             cell_names=cell_names,
             cell_ids=cell_ids,
         )
-    return ""
+    else:
+        return ""
+    return _with_site(body, technology=technology, site_name=site_name or bts)

@@ -41,6 +41,47 @@ def test_parse_full_check_return_ignores_extra_commands():
     assert "LST NRCELL" not in result.as_dict()["commands"]
 
 
+GERENCIA_TASK_RETURN = """\
+Script Task : Claro_RF_Check_Combined_FullCheck_5G
+==========Succeeded MML Command==========
+MML Command-----LST GNODEBFUNCTION:;
+NE : S01GOGNA83
+Report : +++    S01GOGNA83        2026-10-01 13:13:34
+O&M    #2688580928
+%%/*1885279874 MML Session=1790871214*/LST GNODEBFUNCTION:;%%
+RETCODE = 0  Operation succeeded.
+
+          gNodeB Function Name  =  GS01GOGNA83
+                     gNodeB ID  =  203562
+(Number of results = 1)
+
+
+---    END
+
+MML Command-----LST GNBTRACKINGAREA:;
+NE : S01GOGNA83
+Report : +++    S01GOGNA83        2026-10-01 13:13:34
+O&M    #2688580929
+%%/*1885279878 MML Session=1790871214*/LST GNBTRACKINGAREA:;%%
+RETCODE = 0  Operation succeeded.
+
+  Tracking Area ID  =  0
+Tracking Area Code  =  6252962
+(Number of results = 1)
+
+
+---    END
+"""
+
+
+def test_parse_gerencia_task_result_with_mml_session():
+    result = parse_precheck_return(GERENCIA_TASK_RETURN)
+
+    assert result.gnodeb_id == "203562"
+    assert result.tracking_area_code == "6252962"
+    assert result.ne_name == "S01GOGNA83"
+
+
 def test_parse_precheck_return_bytes():
     payload = _load("full_check_5g_return.txt").encode("utf-8")
     result = parse_precheck_return_bytes(payload)

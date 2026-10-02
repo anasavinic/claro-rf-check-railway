@@ -17,7 +17,11 @@ from poscheck.services.errors import (
 
 _BLOCK_SPLIT_RE = re.compile(r"(?m)^---\s+END\s*$")
 _COMMAND_MARKER_RE = re.compile(
-    r"%%/\*\d+\*/\s*(?P<command>[A-Z0-9 ]+?)(?::|;|%%)",
+    r"%%/\*\d+(?:\s+[^*]*?)?\*/\s*(?P<command>[A-Z0-9 ]+?)(?::|;|%%)",
+    re.IGNORECASE,
+)
+_TASK_COMMAND_RE = re.compile(
+    r"(?m)^MML Command-+(?P<command>(?:LST|DSP|CHK)\s+[A-Z0-9]+)",
     re.IGNORECASE,
 )
 _LEADING_COMMAND_RE = re.compile(
@@ -32,7 +36,8 @@ _RESULT_COUNT_RE = re.compile(
     r"\(Number of results\s*=\s*(?P<count>\d+)\)",
     re.IGNORECASE,
 )
-_NE_LINE_RE = re.compile(r"(?m)^\+\+\+\s+(?P<ne>\S+)")
+_NE_LINE_RE = re.compile(r"(?m)^(?:Report\s*:\s*)?\+\+\+\s+(?P<ne>\S+)")
+_NE_LABEL_RE = re.compile(r"(?m)^NE\s*:\s*(?P<ne>\S+)\s*$")
 _CELLID_IN_COMMAND_RE = re.compile(r"CELLID\s*=\s*(?P<cell_id>\d+)", re.IGNORECASE)
 _CELLNAME_IN_COMMAND_RE = re.compile(
     r"(?:SRC2GNCELLNAME|SRC3GNCELLNAME|SRCLTENCELLNAME|CELLNAME)\s*=\s*\"(?P<cell_name>[^\"]+)\"",
@@ -105,12 +110,7 @@ def parse_block(chunk: str) -> MmlCommandBlock | None:
 
     retcode = int(retcode_match.group("code"))
     retcode_message = retcode_match.group("message").strip()
-    ne_match = _NE_LINE_RE.search(chunk)
-    ne_name = ne_match.group("ne") if ne_match else ""
-    if not ne_name:
-        lines = [line.strip() for line in chunk.splitlines() if line.strip()]
-        if len(lines) >= 2 and not lines[1].startswith(("+++", "O&M", "%%", "RETCODE")):
-            ne_name = lines[1]
+    ne_name = _extract_ne_name(chunk)
 
     fields = extract_fields(chunk)
     count_match = _RESULT_COUNT_RE.search(chunk)
@@ -127,10 +127,26 @@ def parse_block(chunk: str) -> MmlCommandBlock | None:
     )
 
 
+def _extract_ne_name(chunk: str) -> str:
+    label = _NE_LABEL_RE.search(chunk)
+    if label:
+        return label.group("ne")
+    ne_match = _NE_LINE_RE.search(chunk)
+    if ne_match:
+        return ne_match.group("ne")
+    lines = [line.strip() for line in chunk.splitlines() if line.strip()]
+    if len(lines) >= 2 and not lines[1].startswith(("+++", "O&M", "%%", "RETCODE", "NE", "Report")):
+        return lines[1]
+    return ""
+
+
 def extract_command(chunk: str) -> str | None:
     marker = _COMMAND_MARKER_RE.search(chunk)
     if marker:
         return normalize_command(marker.group("command"))
+    task = _TASK_COMMAND_RE.search(chunk)
+    if task:
+        return normalize_command(task.group("command"))
     leading = _LEADING_COMMAND_RE.search(chunk)
     if leading:
         return normalize_command(leading.group("command"))

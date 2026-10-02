@@ -23,6 +23,31 @@ def test_mml_parser_5g_extracts_site_and_cells():
     )
 
 
+def test_mml_parser_5g_reads_gerencia_task_session_marker():
+    text = "\n".join(
+        [
+            "Script Task : Claro_RF_Check_Combined_FullCheck_5G",
+            "==========Succeeded MML Command==========",
+            "MML Command-----LST GNODEBFUNCTION:;",
+            "NE : S01GOGNA83",
+            "Report : +++    S01GOGNA83        2026-10-01 13:13:34",
+            "%%/*1885279874 MML Session=1790871214*/LST GNODEBFUNCTION:;%%",
+            "RETCODE = 0  Operation succeeded.",
+            "                     gNodeB ID  =  203562",
+            "(Number of results = 1)",
+            "---    END",
+            "",
+        ]
+    )
+    from poscheck.services.mml_common import parse_blocks
+
+    blocks = parse_blocks(text)
+    assert len(blocks) == 1
+    assert blocks[0].command == "LST GNODEBFUNCTION"
+    assert blocks[0].ne_name == "S01GOGNA83"
+    assert blocks[0].fields["gNodeB ID"] == "203562"
+
+
 def test_mml_parser_5g_explains_incompatible_4g_return():
     text = "\n".join(
         [

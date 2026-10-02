@@ -29,7 +29,11 @@ TRACKING_AREA_CODE_FIELD: Final[str] = "Tracking Area Code"
 
 _BLOCK_SPLIT_RE = re.compile(r"(?m)^---\s+END\s*$")
 _COMMAND_MARKER_RE = re.compile(
-    r"%%/\*\d+\*/\s*(?P<command>[A-Z0-9 ]+?)(?::;)?\s*%%",
+    r"%%/\*\d+(?:\s+[^*]*?)?\*/\s*(?P<command>[A-Z0-9 ]+?)(?::|;|%%)",
+    re.IGNORECASE,
+)
+_TASK_COMMAND_RE = re.compile(
+    r"(?m)^MML Command-+(?P<command>(?:LST|DSP|CHK)\s+[A-Z0-9]+)",
     re.IGNORECASE,
 )
 _LEADING_COMMAND_RE = re.compile(
@@ -44,7 +48,8 @@ _RESULT_COUNT_RE = re.compile(
     r"\(Number of results\s*=\s*(?P<count>\d+)\)",
     re.IGNORECASE,
 )
-_NE_LINE_RE = re.compile(r"(?m)^\+\+\+\s+(?P<ne>\S+)")
+_NE_LINE_RE = re.compile(r"(?m)^(?:Report\s*:\s*)?\+\+\+\s+(?P<ne>\S+)")
+_NE_LABEL_RE = re.compile(r"(?m)^NE\s*:\s*(?P<ne>\S+)\s*$")
 
 
 @dataclass(frozen=True)
@@ -168,8 +173,7 @@ def _parse_block(chunk: str) -> MmlCommandBlock | None:
 
     retcode = int(retcode_match.group("code"))
     retcode_message = retcode_match.group("message").strip()
-    ne_match = _NE_LINE_RE.search(chunk)
-    ne_name = ne_match.group("ne") if ne_match else ""
+    ne_name = _extract_ne_name(chunk)
     if not ne_name:
         # Fallback: second line is often the NE name.
         lines = [line.strip() for line in chunk.splitlines() if line.strip()]
@@ -191,10 +195,26 @@ def _parse_block(chunk: str) -> MmlCommandBlock | None:
     )
 
 
+def _extract_ne_name(chunk: str) -> str:
+    label = _NE_LABEL_RE.search(chunk)
+    if label:
+        return label.group("ne")
+    ne_match = _NE_LINE_RE.search(chunk)
+    if ne_match:
+        return ne_match.group("ne")
+    lines = [line.strip() for line in chunk.splitlines() if line.strip()]
+    if len(lines) >= 2 and not lines[1].startswith(("+++", "O&M", "%%", "RETCODE", "NE")):
+        return lines[1]
+    return ""
+
+
 def _extract_command(chunk: str) -> str | None:
     marker = _COMMAND_MARKER_RE.search(chunk)
     if marker:
         return _normalize_command(marker.group("command"))
+    task = _TASK_COMMAND_RE.search(chunk)
+    if task:
+        return _normalize_command(task.group("command"))
     leading = _LEADING_COMMAND_RE.search(chunk)
     if leading:
         return _normalize_command(leading.group("command"))
