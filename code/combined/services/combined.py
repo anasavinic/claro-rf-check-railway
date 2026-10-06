@@ -257,6 +257,7 @@ def refresh_combined_status(combined: CombinedCheck) -> str:
     statuses = list(combined.analyses.values_list("status", flat=True))
     if not statuses:
         return combined.status
+    previous = combined.status
     if any(s == CheckAnalysisStatus.PROCESSING for s in statuses):
         combined.status = CheckAnalysisStatus.PROCESSING
     elif any(s == CheckAnalysisStatus.AWAITING_RETURNS for s in statuses):
@@ -265,7 +266,8 @@ def refresh_combined_status(combined: CombinedCheck) -> str:
         combined.status = CheckAnalysisStatus.DRAFT
     else:
         combined.status = worst_analysis_status(*statuses)
-    combined.save(update_fields=["status", "updated_at"])
+    if combined.status != previous:
+        combined.save(update_fields=["status", "updated_at"])
     return combined.status
 
 

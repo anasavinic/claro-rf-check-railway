@@ -144,7 +144,7 @@ def compare_full_check_4g(expected: EpExpected4GValues, extraction: FullCheck4GE
                     "label": f"Cell Name ({expected_cell.cell_name})",
                     "expected": expected_cell.cell_name,
                     "found": "",
-                    "status": VALIDATION_STATUS_FAILED,
+                    "status": VALIDATION_STATUS_INCONSISTENT,
                     "note": "Cell was not found in LST CELL return.",
                     "cell_name": expected_cell.cell_name,
                 }

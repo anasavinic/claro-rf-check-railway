@@ -153,7 +153,7 @@ def compare_full_check_5g(expected: EpExpected5GValues, extraction: FullCheck5GE
                     "label": f"Cell ({expected_cell.cell_name})",
                     "expected": expected_cell.cell_name,
                     "found": "",
-                    "status": VALIDATION_STATUS_FAILED,
+                    "status": VALIDATION_STATUS_INCONSISTENT,
                     "note": "Cell was not found in LST NRCELL / LST NRDUCELL return.",
                     "cell_name": expected_cell.cell_name,
                 }
@@ -363,6 +363,9 @@ def _compare_item(
 ) -> dict[str, Any]:
     expected_norm = normalize_comparable(expected)
     found_norm = normalize_comparable(found)
+    if code == VALIDATION_FREQUENCY_BAND:
+        expected_norm = expected_norm.upper()
+        found_norm = found_norm.upper()
     if expected_norm == found_norm:
         status = VALIDATION_STATUS_CONSISTENT
         note = f"Matches EP {ep_field}."

@@ -37,7 +37,7 @@ FULL_CHECK_5G_COMMANDS: Final[tuple[str, ...]] = (
     "LST NRCELLFREQRELATION:;",
     "LST NREXTERNALNCELL:;",
     "LST RRU:;",
-    "DSP BRDMFRINFO:CN=0,SRN=%SRN%,SN=0;",
+    "DSP BRDMFRINFO:;",
     "LST ALMAF:;",
     "CHK DATA2LIC:FUNCTIONTYPE=gNodeB;",
 )

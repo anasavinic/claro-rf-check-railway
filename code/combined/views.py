@@ -26,7 +26,7 @@ from combined.services.combined import (
     total_cells,
 )
 from combined.services.execution import combined_process_status, enqueue_combined_execution, recover_stuck_analyses
-from combined.services.results import build_combined_result, failure_reasons
+from combined.services.results import build_combined_result, failure_reasons, has_comparable_results
 from combined.services.returns import (
     combined_return_ready,
     returns_board,
@@ -473,6 +473,8 @@ def failure(request: HttpRequest) -> HttpResponse:
     combined = _current_combined(request)
     if combined is None:
         return redirect(reverse("combined:configure"))
+    if has_comparable_results(combined):
+        return redirect(reverse("combined:result"))
     return render(
         request,
         "combined/failure.html",

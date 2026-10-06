@@ -88,6 +88,20 @@ def build_combined_result(combined: CombinedCheck) -> dict:
     }
 
 
+def has_comparable_results(combined: CombinedCheck) -> bool:
+    """True when a child analysis produced validation rows, even if some failed."""
+    analyses = combined.analyses.all()
+    for analysis in analyses:
+        for attr in ("poscheck_result", "precheck_result"):
+            try:
+                result = getattr(analysis, attr)
+            except ObjectDoesNotExist:
+                continue
+            if result.validations:
+                return True
+    return False
+
+
 def failure_reasons(combined: CombinedCheck) -> list[dict]:
     """User-facing reasons for each child analysis that failed to parse the MML."""
     reasons: list[dict] = []

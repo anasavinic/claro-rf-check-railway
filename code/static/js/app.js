@@ -14,20 +14,45 @@ document.addEventListener("alpine:init", () => {
 
     async function pollCheckExecution(statusUrl, csrfToken) {
         const maxAttempts = 300;
+        let consecutiveFailures = 0;
         for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
             await new Promise((resolve) => setTimeout(resolve, 1000));
-            const response = await fetch(statusUrl, {
-                method: "GET",
-                headers: {
-                    Accept: "application/json",
-                    "X-CSRFToken": csrfToken,
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-            });
+            let response;
+            try {
+                response = await fetch(statusUrl, {
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json",
+                        "X-CSRFToken": csrfToken,
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                });
+            } catch (error) {
+                consecutiveFailures += 1;
+                if (consecutiveFailures >= 5) {
+                    return {
+                        type: "Error",
+                        title: "Could not process",
+                        message: "The server did not respond. Try again.",
+                    };
+                }
+                continue;
+            }
             const data = await parseJsonResponse(response);
             if (!response.ok || data.type === "Error") {
-                return data;
+                consecutiveFailures += 1;
+                if (consecutiveFailures >= 5) {
+                    return data.type === "Error"
+                        ? data
+                        : {
+                              type: "Error",
+                              title: "Could not process",
+                              message: data.message || "Processing failed.",
+                          };
+                }
+                continue;
             }
+            consecutiveFailures = 0;
             const status = data.execution?.status;
             if (status === "success" || status === "failed") {
                 return data;

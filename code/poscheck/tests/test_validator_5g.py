@@ -10,6 +10,7 @@ from poscheck.services.tech.g5.validator import (
     VALIDATION_CELL_ID,
     VALIDATION_COMMAND,
     VALIDATION_DL_NARFCN,
+    VALIDATION_FREQUENCY_BAND,
     VALIDATION_GNODEB_ID,
     VALIDATION_NR_DU_STATE,
     VALIDATION_PHYSICAL_CELL_ID,
@@ -137,6 +138,24 @@ def test_validator_5g_detects_mismatch(ep_job):
     cell_id_items = [item for item in outcome.validations if item["code"] == VALIDATION_CELL_ID]
     assert cell_id_items
     assert cell_id_items[0]["status"] == VALIDATION_STATUS_INCONSISTENT
+
+
+@pytest.mark.django_db
+def test_validator_5g_band_case_and_missing_cell_are_findings(ep_job):
+    _add_5g_cell(ep_job, cell_name="55S01PRCLG2101", cell_id=100, pci=516, band="N78")
+    _add_5g_cell(ep_job, cell_name="55S01PRCLG2199", cell_id=199, pci=1)
+    analysis = _analysis_5g(ep_job, ["55S01PRCLG2101", "55S01PRCLG2199"])
+
+    outcome = evaluate_poscheck(analysis, _load("full_check_5g_return.txt"))
+
+    assert outcome.overall_status == PrecheckResultStatus.INCONSISTENT
+    band = next(item for item in outcome.validations if item["code"] == VALIDATION_FREQUENCY_BAND)
+    assert band["status"] == VALIDATION_STATUS_CONSISTENT
+    assert band["expected"] == "N78"
+    assert band["found"] == "N78"
+    missing = next(item for item in outcome.validations if item.get("cell_name") == "55S01PRCLG2199")
+    assert missing["status"] == VALIDATION_STATUS_INCONSISTENT
+    assert "not found" in missing["note"]
 
 
 @pytest.mark.django_db

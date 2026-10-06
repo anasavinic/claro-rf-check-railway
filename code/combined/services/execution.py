@@ -7,6 +7,7 @@ from django.db import transaction
 from django.urls import reverse
 
 from combined.services.combined import refresh_combined_status
+from combined.services.results import has_comparable_results
 from combined.services.returns import combined_return_ready
 from precheck.models import (
     CheckAnalysisStatus,
@@ -131,10 +132,10 @@ def combined_process_status(combined: CombinedCheck) -> dict:
     finished = processing == 0 and done == total and total > 0
     redirect_url = ""
     if finished:
-        if combined.status == CheckAnalysisStatus.FAILED or failed:
-            redirect_url = reverse("combined:failure")
-        else:
-            redirect_url = reverse("combined:result")
+        parse_failed = (combined.status == CheckAnalysisStatus.FAILED or failed) and not has_comparable_results(
+            combined
+        )
+        redirect_url = reverse("combined:failure") if parse_failed else reverse("combined:result")
 
     return {
         "combined_id": str(combined.id),
