@@ -22,8 +22,10 @@ from ep_import.services.queries import cell_search, sites_page
 from ep_import.services.scripts import (
     FULL_CHECK_ONLY_TECHNOLOGIES,
     ep_cell_id_from_raw,
+    first_selected_raw,
     generate_full_check_script,
     generate_precheck_script,
+    script_fields_from_raw,
 )
 from ep_import.tasks import process_ep_import
 from precheck.models import CheckType
@@ -286,50 +288,6 @@ def _cell_ids_from_ep(job: ImportJob, technology: str, site: str, cell_names: li
     return ids
 
 
-def _bsc_from_ep(job: ImportJob | None, technology: str, site: str, cell_names: list[str]) -> str:
-    if job is None or technology != Technology.G2.value:
-        return ""
-    cell = (
-        EpCell.objects.filter(
-            job=job,
-            technology=technology,
-            site_name=site,
-            cell_name__in=cell_names,
-        )
-        .order_by("cell_name")
-        .first()
-    )
-    if cell is None:
-        return ""
-    raw = cell.raw or {}
-    return str(raw.get("BSC") or "").strip()
-
-
-def _enodeb_id_from_ep(job: ImportJob | None, technology: str, site: str, cell_names: list[str]) -> str:
-    """Resolve ENODEB ID from selected EP rows (used by 4G full-check scripts)."""
-    if job is None or technology != Technology.G4.value:
-        return ""
-    cell = (
-        EpCell.objects.filter(
-            job=job,
-            technology=technology,
-            site_name=site,
-            cell_name__in=cell_names,
-        )
-        .order_by("cell_name")
-        .first()
-    )
-    if cell is None:
-        return ""
-    value = (cell.raw or {}).get("ENODEB ID")
-    if value is None:
-        return ""
-    text = str(value).strip()
-    if text.endswith(".0"):
-        text = text[:-2]
-    return text
-
-
 def _can_import_returns(pre_check: bool, full_check: bool, technology: str) -> bool:
     if pre_check:
         return True
@@ -344,14 +302,24 @@ def _full_check_script_for(
     cells: list[str],
 ) -> str:
     cell_ids = _cell_ids_from_ep(job, technology, site, cells) if job is not None else []
+    fields = script_fields_from_raw(
+        technology,
+        first_selected_raw(
+            job_id=job.id if job is not None else None,
+            technology=technology,
+            site_name=site,
+            cell_names=cells,
+        ),
+    )
     return generate_full_check_script(
         technology,
         site_name=site,
         cell_names=cells,
         cell_ids=cell_ids,
-        bsc=_bsc_from_ep(job, technology, site, cells),
-        bts=site,
-        enodeb_id=_enodeb_id_from_ep(job, technology, site, cells),
+        bsc=fields["bsc"],
+        bts=fields["bts"],
+        rnc=fields["rnc"],
+        enodeb_id=fields["enodeb_id"],
     )
 
 

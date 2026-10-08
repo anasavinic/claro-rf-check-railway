@@ -118,8 +118,8 @@
 								<td class="py-3 px-4" x-text="row.tech_label || row.technology"></td>
 								<td class="py-3 px-4" x-text="row.site_name"></td>
 								<td class="py-3 px-4 font-medium text-dark-blue" x-text="row.label || row.code || row.parameter"></td>
-								<td class="py-3 px-4 text-secondary" x-text="row.expected ?? '—'"></td>
-								<td class="py-3 px-4" x-text="row.found ?? row.actual ?? '—'"></td>
+								<td class="py-3 px-4 text-secondary" x-text="row.expected || '—'"></td>
+								<td class="py-3 px-4" x-text="row.found || row.actual || '—'"></td>
 								<td class="py-3 px-4">
 									<span class="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded"
 									      :class="statusClass(row.status)"

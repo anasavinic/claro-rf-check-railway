@@ -146,6 +146,10 @@ FULL_CHECK_2G_PER_CELL_COMMANDS: Final[tuple[str, ...]] = (
 )
 
 _IDENTIFIER_KEYS: Final[tuple[str, ...]] = ("BSC", "BTS", "CELL", "CELLID")
+BTS_EP_FIELD: Final[str] = "*BTS NAME"
+RNC_NAME_EP_FIELD: Final[str] = "RNC NAME"
+BSC_EP_FIELD: Final[str] = "BSC"
+ENODEB_ID_EP_FIELD: Final[str] = "ENODEB ID"
 CELL_ID_EP_FIELDS: Final[dict[str, tuple[str, ...]]] = {
     "2G": ("*CI", "CI", "CELL ID"),
     "3G": ("CELL ID",),
@@ -410,32 +414,101 @@ def generate_full_check_2g_script(
     return "\n".join(lines) + "\n"
 
 
-def gerencia_script(body: str, *, technology: str, site_name: str) -> str:
+def script_fields_from_raw(technology: str, raw: dict | None) -> dict[str, str]:
+    """Read MML identifiers from one EP row.
+
+    ``bts`` is ``*BTS NAME`` (command body). ``bsc`` and ``rnc`` are the
+    Gerência network elements for 2G and 3G. They are not the station name.
+    """
+    payload = raw or {}
+
+    def text(field: str, *, numeric: bool = False) -> str:
+        value = payload.get(field)
+        if value is None:
+            return ""
+        rendered = str(value).strip()
+        if numeric and rendered.endswith(".0"):
+            rendered = rendered[:-2]
+        return rendered
+
+    return {
+        "bsc": text(BSC_EP_FIELD) if technology == "2G" else "",
+        "bts": text(BTS_EP_FIELD) if technology == "2G" else "",
+        "rnc": text(RNC_NAME_EP_FIELD) if technology == "3G" else "",
+        "enodeb_id": text(ENODEB_ID_EP_FIELD, numeric=True) if technology == "4G" else "",
+    }
+
+
+def first_selected_raw(
+    *,
+    job_id,
+    technology: str,
+    site_name: str,
+    cell_names: Sequence[str] | None,
+) -> dict:
+    """Return the raw EP payload of the first selected cell, or an empty dict."""
+    if not job_id or not str(site_name or "").strip():
+        return {}
+    names = [str(name).strip() for name in (cell_names or []) if str(name).strip()]
+    if not names:
+        return {}
+    from ep_import.models import EpCell
+
+    cell = (
+        EpCell.objects.filter(
+            job_id=job_id,
+            technology=technology,
+            site_name=site_name,
+            cell_name__in=names,
+        )
+        .order_by("cell_name")
+        .first()
+    )
+    if cell is None:
+        return {}
+    return dict(cell.raw or {})
+
+
+def gerencia_ne_name(technology: str, *, site_name: str = "", bsc: str = "", rnc: str = "") -> str:
+    """Network element Gerência should run the commands against."""
+    if technology == "2G":
+        return (bsc or "").strip() or (site_name or "").strip()
+    if technology == "3G":
+        return (rnc or "").strip() or (site_name or "").strip()
+    return (site_name or "").strip()
+
+
+def gerencia_script(body: str, *, technology: str, site_name: str, ne_name: str = "") -> str:
     """Format a script so Gerência can run it.
 
-    The first line must start with ``//``. Each command carries the selected
-    site as ``{SITE}``.
+    The first line must start with ``//`` and names the station. Each command
+    carries the network element as ``{NE}``: BSC on 2G, RNC NAME on 3G, and
+    the station (SINGLE RAN NAME) on 4G and 5G.
     """
     site = site_name.strip()
+    ne = (ne_name or site).strip()
+    if not ne:
+        return body if body.endswith("\n") or not body else f"{body}\n"
     label = {"2G": "2G", "3G": "3G", "4G": "4G LTE", "5G": "5G NR"}.get(technology, technology)
-    header = f"//# --- {label} · {site} ---"
-    suffix = f"{{{site}}}"
+    header = f"//# --- {label} · {site or ne} ---"
+    suffix = f"{{{ne}}}"
     lines = [header]
     for line in body.splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#") or stripped.startswith("//"):
             continue
-        if f"{{{site}}}" not in stripped:
+        if suffix not in stripped:
             stripped = f"{stripped}{suffix}"
         lines.append(stripped)
     return "\n".join(lines) + "\n"
 
 
-def _with_site(body: str, *, technology: str, site_name: str) -> str:
+def _with_site(body: str, *, technology: str, site_name: str, ne_name: str = "") -> str:
     site = (site_name or "").strip()
-    if not site or not body.strip():
+    ne = (ne_name or site).strip()
+    if not ne or not body.strip():
         return body
-    return gerencia_script(body, technology=technology, site_name=site)
+    return gerencia_script(body, technology=technology, site_name=site or ne, ne_name=ne)
 
 
 def generate_precheck_script(
@@ -458,6 +531,7 @@ def generate_full_check_script(
     cell_ids: Sequence[str] | None = None,
     bsc: str = "",
     bts: str = "",
+    rnc: str = "",
     enodeb_id: str = "",
 ) -> str:
     """Dispatch full-check (pos-check) script generation by technology."""
@@ -481,4 +555,6 @@ def generate_full_check_script(
         )
     else:
         return ""
-    return _with_site(body, technology=technology, site_name=site_name or bts)
+    station = (site_name or bts).strip()
+    ne = gerencia_ne_name(technology, site_name=station, bsc=bsc, rnc=rnc)
+    return _with_site(body, technology=technology, site_name=station, ne_name=ne)

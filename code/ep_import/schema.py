@@ -100,12 +100,13 @@ REQUIRED_COLUMNS: Final[dict[Technology, tuple[str, ...]]] = {
     ),
 }
 
-# Keys used by UI (Figma site / cell tables) and check selection.
+# Station identity is SINGLE RAN NAME. Tech-specific names stay as fallbacks
+# and remain available on the raw row for MML identifiers (BTS, NodeB, eNodeB).
 SITE_KEY_COLUMNS: Final[dict[Technology, tuple[str, ...]]] = {
-    Technology.G2: ("*BTS NAME", "SINGLE RAN NAME"),
-    Technology.G3: ("NODEB NAME", "SINGLE RAN NAME"),
-    Technology.G4: ("ENODEBNAME", "SINGLE RAN NAME"),
-    Technology.G5: ("ENODEB NAME", "SINGLE RAN NAME"),
+    Technology.G2: ("SINGLE RAN NAME", "*BTS NAME"),
+    Technology.G3: ("SINGLE RAN NAME", "NODEB NAME"),
+    Technology.G4: ("SINGLE RAN NAME", "ENODEBNAME"),
+    Technology.G5: ("SINGLE RAN NAME", "ENODEB NAME"),
 }
 
 CELL_KEY_COLUMNS: Final[dict[Technology, str]] = {

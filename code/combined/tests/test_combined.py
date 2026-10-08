@@ -9,6 +9,7 @@ from django.urls import reverse
 
 from combined.services.combined import (
     SESSION_COMBINED_KEY,
+    build_scripts,
     create_combined_check,
     site_family_keys,
     sites_across_technologies,
@@ -137,6 +138,47 @@ def test_configure_and_materialize_flow(auth_client):
     assert b"5G NR" in scripts_page.content
     assert b"Import results" in scripts_page.content
     assert b"Full Check" in scripts_page.content
+
+
+@pytest.mark.django_db
+def test_build_scripts_targets_bsc_and_rnc_for_the_selected_site(auth_client):
+    from combined.services.combined import attach_ep_job, materialize_analyses, set_sites
+
+    job = ImportJob.objects.create(
+        created_by=auth_client.user,
+        original_filename="ep.xlsx",
+        stored_file="ep/ep.xlsx",
+        content_sha256="gsm",
+        status=ImportJobStatus.SUCCESS,
+    )
+    EpCell.objects.create(
+        job=job,
+        technology="2G",
+        site_name="S01DFSQSM1",
+        cell_name="22S01DFSQSM101",
+        raw={"*BTS NAME": "BS01DFSQSM1", "BSC": "BSCAC33", "*CI": "1"},
+    )
+    EpCell.objects.create(
+        job=job,
+        technology="3G",
+        site_name="S01DFSQSM1",
+        cell_name="22S01DFSQSM101",
+        raw={"NODEB NAME": "NS01DFSQSM1", "RNC NAME": "RNCAC01", "CELL ID": "11"},
+    )
+    combined = create_combined_check(user=auth_client.user, technologies=["2G", "3G"])
+    attach_ep_job(combined, job)
+    set_sites(combined, ["S01DFSQSM1"])
+    materialize_analyses(combined)
+
+    script = build_scripts(combined)["full_check_script"]
+
+    assert "//# --- 2G · S01DFSQSM1 ---" in script
+    assert 'LST GCELL:IDTYPE=BYNAME,BTSNAME="BS01DFSQSM1";{BSCAC33}' in script
+    assert "//# --- 3G · S01DFSQSM1 ---" in script
+    assert "{RNCAC01}" in script
+    assert "{BS01DFSQSM1}" not in script
+    assert "{NS01DFSQSM1}" not in script
+    assert "BSCAC33RNCAC01" not in script
 
 
 @pytest.mark.django_db

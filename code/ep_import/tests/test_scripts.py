@@ -83,6 +83,40 @@ def test_exported_script_uses_gerencia_header_and_site_braces():
     assert all(line == lines[0] or line.endswith("{S01GOGNA83}") for line in lines)
 
 
+def test_full_check_2g_suffix_uses_bsc_and_keeps_bts_name():
+    content = generate_full_check_script(
+        "2G",
+        site_name="S01DFSQSM1",
+        bts="BS01DFSQSM1",
+        bsc="BSCAC33",
+        cell_names=["22S01DFSQSM101"],
+        cell_ids=["1"],
+    )
+    lines = content.splitlines()
+
+    assert lines[0] == "//# --- 2G · S01DFSQSM1 ---"
+    assert lines[1] == 'LST GCELL:IDTYPE=BYNAME,BTSNAME="BS01DFSQSM1";{BSCAC33}'
+    assert all(line == lines[0] or line.endswith("{BSCAC33}") for line in lines)
+    assert "{S01DFSQSM1}" not in content
+    assert "{BS01DFSQSM1}" not in content
+
+
+def test_full_check_3g_suffix_uses_rnc_name():
+    content = generate_full_check_script(
+        "3G",
+        site_name="S01DFSQSM1",
+        rnc="RNCAC01",
+        cell_names=["22S01DFSQSM101"],
+        cell_ids=["11"],
+    )
+    lines = content.splitlines()
+
+    assert lines[0] == "//# --- 3G · S01DFSQSM1 ---"
+    assert lines[1].endswith("{RNCAC01}")
+    assert "BSCAC33" not in content
+    assert all(line == lines[0] or line.endswith("{RNCAC01}") for line in lines)
+
+
 @pytest.mark.django_db
 def test_generate_scripts_validates_selection_and_opens_scripts_page(auth_client):
     job = _ready_job(user=auth_client.user)

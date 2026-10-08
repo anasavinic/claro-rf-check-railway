@@ -7,8 +7,17 @@ from ep_import.schema import Technology, region_from_filename, resolve_column_na
 from ep_import.services.errors import EpImportError
 from ep_import.services.importer import import_ep_file
 from ep_import.services.layout import validate_headers
+from ep_import.services.mapper import site_name
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def test_site_name_prefers_single_ran_name():
+    assert site_name({"SINGLE RAN NAME": "S01GOGNA83", "ENODEBNAME": "ES01GOGNA83"}, Technology.G4) == "S01GOGNA83"
+    assert site_name({"ENODEBNAME": "ES01GOGNA83"}, Technology.G4) == "ES01GOGNA83"
+    assert site_name({"SINGLE RAN NAME": "S01", "*BTS NAME": "BS01"}, Technology.G2) == "S01"
+    assert site_name({"SINGLE RAN NAME": "S01", "NODEB NAME": "NS01"}, Technology.G3) == "S01"
+    assert site_name({"SINGLE RAN NAME": "S01", "ENODEB NAME": "ES01"}, Technology.G5) == "S01"
 
 
 def test_region_from_filename():

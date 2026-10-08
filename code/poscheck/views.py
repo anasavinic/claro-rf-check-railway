@@ -14,7 +14,13 @@ from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_GET, require_POST
 
 from ep_import.models import EpCell
-from ep_import.services.scripts import ep_cell_id_from_raw, generate_full_check_script, generate_precheck_script
+from ep_import.services.scripts import (
+    ep_cell_id_from_raw,
+    first_selected_raw,
+    generate_full_check_script,
+    generate_precheck_script,
+    script_fields_from_raw,
+)
 from poscheck.forms import PoscheckReturnUploadForm
 from poscheck.services.errors import PoscheckError
 from poscheck.services.orchestrator import get_poscheck_snapshot
@@ -93,46 +99,26 @@ def _cell_ids_for_analysis(analysis: CheckAnalysis) -> list[str]:
     return ids
 
 
-def _bsc_for_analysis(analysis: CheckAnalysis) -> str:
-    if analysis.technology != "2G":
-        return ""
-    cell = (
-        EpCell.objects.filter(
+def _full_check_script_for(analysis: CheckAnalysis) -> str:
+    fields = script_fields_from_raw(
+        analysis.technology,
+        first_selected_raw(
             job_id=analysis.ep_job_id,
             technology=analysis.technology,
             site_name=analysis.site_name,
-            cell_name__in=analysis.selected_cells or [],
-        )
-        .order_by("cell_name")
-        .first()
+            cell_names=analysis.selected_cells or [],
+        ),
     )
-    if cell is None:
-        return ""
-    return str((cell.raw or {}).get("BSC") or "").strip()
-
-
-def _enodeb_id_for_analysis(analysis: CheckAnalysis) -> str:
-    if analysis.technology != "4G":
-        return ""
-    cell = (
-        EpCell.objects.filter(
-            job_id=analysis.ep_job_id,
-            technology=analysis.technology,
-            site_name=analysis.site_name,
-            cell_name__in=analysis.selected_cells or [],
-        )
-        .order_by("cell_name")
-        .first()
+    return generate_full_check_script(
+        analysis.technology,
+        site_name=analysis.site_name,
+        cell_names=analysis.selected_cells or [],
+        cell_ids=_cell_ids_for_analysis(analysis),
+        bsc=fields["bsc"],
+        bts=fields["bts"],
+        rnc=fields["rnc"],
+        enodeb_id=fields["enodeb_id"],
     )
-    if cell is None:
-        return ""
-    value = (cell.raw or {}).get("ENODEB ID")
-    if value is None:
-        return ""
-    text = str(value).strip()
-    if text.endswith(".0"):
-        text = text[:-2]
-    return text
 
 
 def _analysis_context(analysis: CheckAnalysis, *, can_mutate: bool = True) -> dict:
@@ -169,19 +155,7 @@ def _analysis_context(analysis: CheckAnalysis, *, can_mutate: bool = True) -> di
             if analysis.pre_check
             else ""
         ),
-        "full_check_script": (
-            generate_full_check_script(
-                analysis.technology,
-                site_name=analysis.site_name,
-                cell_names=analysis.selected_cells or [],
-                cell_ids=_cell_ids_for_analysis(analysis),
-                bsc=_bsc_for_analysis(analysis),
-                bts=analysis.site_name,
-                enodeb_id=_enodeb_id_for_analysis(analysis),
-            )
-            if analysis.full_check
-            else ""
-        ),
+        "full_check_script": (_full_check_script_for(analysis) if analysis.full_check else ""),
         "precheck_return": precheck_file,
         "has_precheck_return": precheck_file is not None,
         "full_check_return": full_check_file,

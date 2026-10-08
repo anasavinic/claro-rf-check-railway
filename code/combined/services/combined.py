@@ -12,8 +12,10 @@ from ep_import.models import EpCell, ImportJob
 from ep_import.services.scripts import (
     FULL_CHECK_ONLY_TECHNOLOGIES,
     ep_cell_id_from_raw,
+    first_selected_raw,
     generate_full_check_script,
     generate_precheck_script,
+    script_fields_from_raw,
 )
 from precheck.models import CheckAnalysis, CheckAnalysisStatus, CombinedCheck
 
@@ -227,14 +229,24 @@ def build_scripts(combined: CombinedCheck) -> dict:
                     f"{bucket['precheck_script']}\n{block}".strip() + "\n" if bucket["precheck_script"] else block
                 )
         if analysis.full_check:
+            fields = script_fields_from_raw(
+                analysis.technology,
+                first_selected_raw(
+                    job_id=analysis.ep_job_id,
+                    technology=analysis.technology,
+                    site_name=analysis.site_name,
+                    cell_names=analysis.selected_cells or [],
+                ),
+            )
             script = generate_full_check_script(
                 analysis.technology,
                 site_name=analysis.site_name,
                 cell_names=analysis.selected_cells or [],
                 cell_ids=_cell_ids_for_analysis(analysis),
-                bsc=_bsc_for_analysis(analysis),
-                bts=analysis.site_name,
-                enodeb_id=_enodeb_id_for_analysis(analysis),
+                bsc=fields["bsc"],
+                bts=fields["bts"],
+                rnc=fields["rnc"],
+                enodeb_id=fields["enodeb_id"],
             )
             if script.strip():
                 block = script if script.endswith("\n") else f"{script}\n"
@@ -300,45 +312,3 @@ def _cell_ids_for_analysis(analysis: CheckAnalysis) -> list[str]:
         if value:
             ids.append(value)
     return ids
-
-
-def _bsc_for_analysis(analysis: CheckAnalysis) -> str:
-    if analysis.technology != "2G":
-        return ""
-    cell = (
-        EpCell.objects.filter(
-            job_id=analysis.ep_job_id,
-            technology=analysis.technology,
-            site_name=analysis.site_name,
-            cell_name__in=analysis.selected_cells or [],
-        )
-        .order_by("cell_name")
-        .first()
-    )
-    if cell is None:
-        return ""
-    return str((cell.raw or {}).get("BSC") or "").strip()
-
-
-def _enodeb_id_for_analysis(analysis: CheckAnalysis) -> str:
-    if analysis.technology != "4G":
-        return ""
-    cell = (
-        EpCell.objects.filter(
-            job_id=analysis.ep_job_id,
-            technology=analysis.technology,
-            site_name=analysis.site_name,
-            cell_name__in=analysis.selected_cells or [],
-        )
-        .order_by("cell_name")
-        .first()
-    )
-    if cell is None:
-        return ""
-    value = (cell.raw or {}).get("ENODEB ID")
-    if value is None:
-        return ""
-    text = str(value).strip()
-    if text.endswith(".0"):
-        text = text[:-2]
-    return text

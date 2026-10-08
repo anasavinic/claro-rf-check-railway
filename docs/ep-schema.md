@@ -32,10 +32,10 @@ are **ignored** (optional warning).
 
 | Tech | Site key | Cell key | On-air status |
 |------|----------|----------|---------------|
-| 2G | `*BTS NAME` (fallback `SINGLE RAN NAME`) | `*GSM CELL NAME` | `ON AIR (U2000)` |
-| 3G | `NODEB NAME` (fallback `SINGLE RAN NAME`) | `CELLNAME` | `ON AIR (U2000)` |
-| 4G | `ENODEBNAME` (fallback `SINGLE RAN NAME`) | `CELL NAME` | `ON AIR` |
-| 5G | `ENODEB NAME` (fallback `SINGLE RAN NAME`) | `CELL NAME` | — (presence; no common on-air column) |
+| 2G | `SINGLE RAN NAME` (fallback `*BTS NAME`) | `*GSM CELL NAME` | `ON AIR (U2000)` |
+| 3G | `SINGLE RAN NAME` (fallback `NODEB NAME`) | `CELLNAME` | `ON AIR (U2000)` |
+| 4G | `SINGLE RAN NAME` (fallback `ENODEBNAME`) | `CELL NAME` | `ON AIR` |
+| 5G | `SINGLE RAN NAME` (fallback `ENODEB NAME`) | `CELL NAME` | — (presence; no common on-air column) |
 
 ## Minimum required columns (layout gate)
 
