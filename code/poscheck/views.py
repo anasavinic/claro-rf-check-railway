@@ -12,7 +12,10 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_GET, require_POST
+from results.adapters import poscheck_source_snapshot
+from results.builders import build_from_analysis
 
+from claro_rf_check.celery_dispatch import BROKER_UNAVAILABLE_CODE
 from ep_import.models import EpCell
 from ep_import.services.scripts import (
     ep_cell_id_from_raw,
@@ -23,15 +26,23 @@ from ep_import.services.scripts import (
 )
 from poscheck.forms import PoscheckReturnUploadForm
 from poscheck.services.errors import PoscheckError
-from poscheck.services.orchestrator import get_poscheck_snapshot
 from poscheck.services.returns import has_full_check_return, store_full_check_return
-from precheck.models import CheckAnalysis, CheckAnalysisStatus, CheckExecutionStatus, CheckType, PrecheckResultStatus
+from precheck.models import (
+    CheckAnalysis,
+    CheckAnalysisStatus,
+    CheckExecutionStatus,
+    CheckType,
+    PrecheckResultStatus,
+)
 from precheck.services.analysis import SESSION_ANALYSIS_KEY
 from precheck.services.authorization import can_mutate_analysis, mutable_analysis, visible_analysis
-from precheck.services.errors import PrecheckError
-from precheck.services.execution import build_process_response, enqueue_check_execution
+from precheck.services.errors import PrecheckError, format_issue_messages
+from precheck.services.execution import (
+    build_process_response,
+    dispatch_check_execution,
+    enqueue_check_execution,
+)
 from precheck.services.returns import MAX_RETURN_UPLOAD_BYTES, has_precheck_return
-from precheck.tasks import process_check_execution
 
 logger = logging.getLogger("poscheck.views")
 
@@ -165,7 +176,10 @@ def _analysis_context(analysis: CheckAnalysis, *, can_mutate: bool = True) -> di
         "can_reanalyze": bool(can_mutate and requires_full and terminal),
         "max_return_mb": MAX_RETURN_UPLOAD_BYTES // (1024 * 1024),
         "upload_precheck_url": (
-            reverse("precheck:upload_precheck_return", kwargs={"technology": analysis.technology})
+            reverse(
+                "precheck:upload_precheck_return",
+                kwargs={"technology": analysis.technology},
+            )
             if can_mutate and analysis.pre_check
             else ""
         ),
@@ -208,7 +222,7 @@ def upload_full_check_return(request: HttpRequest) -> HttpResponse:
         stored = store_full_check_return(analysis, form.cleaned_data["file"])
     except PoscheckError as exc:
         status = 409 if exc.code == "ANALYSIS_BUSY" else 400
-        return _json_error(exc.title, exc.issues[0].message if exc.issues else str(exc), status=status)
+        return _json_error(exc.title, format_issue_messages(exc), status=status)
     except Exception:
         logger.exception("Full Check return upload failed")
         return _json_error("Upload error", "Could not upload the return file. Try again.", status=500)
@@ -252,15 +266,23 @@ def process(request: HttpRequest) -> HttpResponse:
     try:
         execution, created = enqueue_check_execution(analysis, user=request.user)
         if created or (execution.status == CheckExecutionStatus.PENDING and not execution.task_id):
-            process_check_execution.delay(str(execution.id))
+            dispatch_check_execution(execution)
         execution.refresh_from_db()
     except (PrecheckError, PoscheckError) as exc:
-        status = 409 if getattr(exc, "code", "") == "ANALYSIS_BUSY" else 400
-        issues = getattr(exc, "issues", None) or []
-        message = issues[0].message if issues else str(exc)
-        return _json_error(exc.title, message, status=status)
+        code = getattr(exc, "code", "")
+        if code == "ANALYSIS_BUSY":
+            status = 409
+        elif code == BROKER_UNAVAILABLE_CODE:
+            status = 503
+        else:
+            status = 400
+        return _json_error(exc.title, format_issue_messages(exc), status=status)
     except PermissionDenied:
-        return _json_error("Could not process", "You do not have permission to modify this analysis.", status=403)
+        return _json_error(
+            "Could not process",
+            "You do not have permission to modify this analysis.",
+            status=403,
+        )
 
     payload, status_code = build_process_response(execution, created=created)
     return JsonResponse(payload, status=status_code)
@@ -293,7 +315,8 @@ def result(request: HttpRequest) -> HttpResponse:
     if not analysis or not analysis.full_check:
         return redirect(reverse("ep_import:site_cells", kwargs={"technology": "5G"}))
 
-    snapshot = get_poscheck_snapshot(analysis.id)
+    consolidated = build_from_analysis(analysis)
+    snapshot = poscheck_source_snapshot(consolidated)
     if not snapshot:
         return redirect(reverse("precheck:import_returns", kwargs={"technology": analysis.technology}))
     if snapshot["status"] == PrecheckResultStatus.EXECUTION_FAILURE:
@@ -316,7 +339,8 @@ def failure(request: HttpRequest) -> HttpResponse:
     if not analysis or not analysis.full_check:
         return redirect(reverse("ep_import:site_cells", kwargs={"technology": "5G"}))
 
-    snapshot = get_poscheck_snapshot(analysis.id)
+    consolidated = build_from_analysis(analysis)
+    snapshot = poscheck_source_snapshot(consolidated)
     if not snapshot:
         return redirect(reverse("precheck:import_returns", kwargs={"technology": analysis.technology}))
     if snapshot["status"] != PrecheckResultStatus.EXECUTION_FAILURE:

@@ -11,6 +11,7 @@ from django.views.decorators.http import require_GET
 from combined.services.authorization import visible_combined
 from combined.services.combined import SESSION_COMBINED_KEY
 from precheck.services.authorization import visible_analysis
+from precheck.services.errors import format_issue_messages
 from reports.services.email import (
     EML_CONTENT_TYPE,
     MSG_CONTENT_TYPE,
@@ -71,7 +72,7 @@ def _load_payload(request: HttpRequest, analysis_id):
     try:
         return build_export_payload(analysis), None
     except ExportError as exc:
-        message = exc.issues[0].message if exc.issues else str(exc)
+        message = format_issue_messages(exc)
         return None, _json_error(exc.title, message, status=400)
 
 
@@ -145,7 +146,7 @@ def _load_combined_payload(request: HttpRequest):
     try:
         return build_combined_export_payload(combined), None
     except ExportError as exc:
-        message = exc.issues[0].message if exc.issues else str(exc)
+        message = format_issue_messages(exc)
         return None, _json_error(exc.title, message, status=400)
 
 

@@ -3,7 +3,9 @@ from pathlib import Path
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from kombu.exceptions import OperationalError as KombuOperationalError
 
+from claro_rf_check.celery_dispatch import BROKER_UNAVAILABLE_CODE, BROKER_UNAVAILABLE_MESSAGE
 from ep_import.models import EpCell, ImportJob, ImportJobStatus
 from ep_import.services.persist import process_job
 
@@ -55,6 +57,39 @@ def test_upload_endpoint_eager(auth_client, tmp_path, settings):
     job = ImportJob.objects.get(pk=data["job"]["id"])
     assert job.status == ImportJobStatus.SUCCESS
     assert EpCell.objects.filter(job=job).count() == 6
+
+
+@pytest.mark.django_db
+def test_upload_endpoint_broker_down_marks_job_failed(auth_client, tmp_path, settings, monkeypatch):
+    settings.MEDIA_ROOT = tmp_path
+    source = FIXTURES / "ep_claro_minimal.xlsx"
+
+    monkeypatch.setattr(
+        "ep_import.views.delay_task",
+        lambda *args, **kwargs: (_ for _ in ()).throw(KombuOperationalError("broker down")),
+    )
+
+    with source.open("rb") as fh:
+        response = auth_client.post(
+            reverse("ep_import:upload"),
+            {
+                "file": SimpleUploadedFile(
+                    "RNP_SRAN_CO_minimal.xlsx",
+                    fh.read(),
+                    content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ),
+                "technology": "5G",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+    assert response.status_code == 503
+    data = response.json()
+    assert data["type"] == "Error"
+    assert data["message"] == BROKER_UNAVAILABLE_MESSAGE
+    job = ImportJob.objects.get(pk=data["job"]["id"])
+    assert job.status == ImportJobStatus.FAILED
+    assert job.issues[0]["code"] == BROKER_UNAVAILABLE_CODE
 
 
 @pytest.mark.django_db

@@ -41,10 +41,13 @@
 					<button type="button"
 					        class="bg-primary text-white px-4 py-2.5 rounded-lg text-[13px] font-semibold cursor-pointer"
 					        @click="copyPreCheck">Copy script</button>
-					<a href="{% url 'ep_import:download_script' technology=technology check_type='precheck' %}"
-					   class="bg-white border border-primary text-primary px-4 py-2.5 rounded-lg text-[13px] font-semibold text-center">
-						Download script
-					</a>
+					<button type="button"
+					        class="bg-white border border-primary text-primary px-4 py-2.5 rounded-lg text-[13px] font-semibold text-center cursor-pointer disabled:opacity-60 disabled:cursor-wait inline-flex items-center justify-center gap-2"
+					        :disabled="downloadBusy"
+					        @click="downloadScript('precheck', '{% url 'ep_import:download_script' technology=technology check_type='precheck' %}', 'Claro_RF_Check_PreCheck.txt', 'Script downloaded')">
+						<span x-show="scriptBusy('precheck')" x-cloak class="size-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+						<span x-text="scriptButtonLabel('precheck')">Download script</span>
+					</button>
 				</div>
 			</section>
 			{% endif %}
@@ -61,10 +64,13 @@
 					<button type="button"
 					        class="bg-primary text-white px-4 py-2.5 rounded-lg text-[13px] font-semibold cursor-pointer"
 					        @click="copyFullCheck">Copy script</button>
-					<a href="{% url 'ep_import:download_script' technology=technology check_type='full-check' %}"
-					   class="bg-white border border-primary text-primary px-4 py-2.5 rounded-lg text-[13px] font-semibold text-center">
-						Download script
-					</a>
+					<button type="button"
+					        class="bg-white border border-primary text-primary px-4 py-2.5 rounded-lg text-[13px] font-semibold text-center cursor-pointer disabled:opacity-60 disabled:cursor-wait inline-flex items-center justify-center gap-2"
+					        :disabled="downloadBusy"
+					        @click="downloadScript('full-check', '{% url 'ep_import:download_script' technology=technology check_type='full-check' %}', 'Claro_RF_Check_FullCheck.txt', 'Script downloaded')">
+						<span x-show="scriptBusy('full-check')" x-cloak class="size-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+						<span x-text="scriptButtonLabel('full-check')">Download script</span>
+					</button>
 				</div>
 			</section>
 			{% endif %}

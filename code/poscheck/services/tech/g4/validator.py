@@ -7,10 +7,14 @@ from dataclasses import dataclass
 from typing import Any, Final
 
 from ep_import.models import EpCell, ImportJobStatus
-from ep_import.services.scripts import FULL_CHECK_4G_PER_CELL_COMMANDS, FULL_CHECK_4G_SITE_COMMANDS
+from ep_import.services.scripts import (
+    FULL_CHECK_4G_PER_CELL_COMMANDS,
+    FULL_CHECK_4G_SITE_COMMANDS,
+)
 from poscheck.services.errors import (
     PoscheckError,
     PoscheckIssue,
+    cell_missing_note,
     ep_field_inconsistent,
     ep_field_missing,
     full_check_not_selected,
@@ -145,7 +149,7 @@ def compare_full_check_4g(expected: EpExpected4GValues, extraction: FullCheck4GE
                     "expected": expected_cell.cell_name,
                     "found": "",
                     "status": VALIDATION_STATUS_INCONSISTENT,
-                    "note": "Cell was not found in LST CELL return.",
+                    "note": cell_missing_note(expected_cell.cell_name, "LST CELL"),
                     "cell_name": expected_cell.cell_name,
                 }
             )

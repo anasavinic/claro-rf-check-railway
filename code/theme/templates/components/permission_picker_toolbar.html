@@ -1,0 +1,16 @@
+{# Optional extra_class for padding/border variants. #}
+<div class="flex flex-wrap items-center justify-between gap-3 {{ extra_class }}">
+	<div class="relative flex-1 min-w-[240px]">
+		<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+		<input
+			type="text"
+			data-perm-search
+			placeholder="Filter permissions by name or module..."
+			class="input input-editable h-10 w-full !pl-9"
+		>
+	</div>
+	<div class="flex items-center gap-2">
+		<button type="button" data-perm-select-all class="settings-btn-secondary !px-3 !py-1.5 !text-[12px]">Select all</button>
+		<button type="button" data-perm-clear-all class="settings-btn-secondary !px-3 !py-1.5 !text-[12px]">Clear all</button>
+	</div>
+</div>

@@ -65,7 +65,7 @@ def _body(payload: ExportPayload) -> str:
         f"Type: {payload.check_types_label}",
         f"Date: {payload.processed_at}",
         f"Cells: {len(payload.cells)} ({', '.join(payload.cells) or '—'})",
-        f"Overall Score: {payload.score}%" if payload.score is not None else "Overall Score: —",
+        (f"Overall Score: {payload.score}%" if payload.score is not None else "Overall Score: —"),
         (
             f"Total: {payload.counts['total']} | "
             f"OK: {payload.counts['consistent']} | "

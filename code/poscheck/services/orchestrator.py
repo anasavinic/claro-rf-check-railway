@@ -25,7 +25,13 @@ from poscheck.services.tech.g3.validator import (
 )
 from poscheck.services.tech.g3.validator import PoscheckOutcome as G3Outcome
 from poscheck.services.tech.g5.validator import PoscheckOutcome as G5Outcome
-from precheck.models import CheckAnalysis, CheckAnalysisStatus, CheckReturnFile, CheckType, PrecheckResultStatus
+from precheck.models import (
+    CheckAnalysis,
+    CheckAnalysisStatus,
+    CheckReturnFile,
+    CheckType,
+    PrecheckResultStatus,
+)
 
 PoscheckOutcome = G2Outcome | G3Outcome | G5Outcome
 
@@ -112,7 +118,7 @@ def get_poscheck_snapshot(analysis_id: UUID | str) -> dict[str, Any] | None:
         "error_code": result.error_code,
         "error_title": result.error_title,
         "error_detail": result.error_detail,
-        "processed_at": result.processed_at.isoformat() if result.processed_at else None,
+        "processed_at": (result.processed_at.isoformat() if result.processed_at else None),
     }
 
 

@@ -42,7 +42,10 @@ class Migration(migrations.Migration):
                 ("validations", models.JSONField(blank=True, default=list)),
                 ("extracted", models.JSONField(blank=True, default=dict)),
                 ("error_code", models.CharField(blank=True, default="", max_length=64)),
-                ("error_title", models.CharField(blank=True, default="", max_length=255)),
+                (
+                    "error_title",
+                    models.CharField(blank=True, default="", max_length=255),
+                ),
                 ("error_detail", models.TextField(blank=True, default="")),
                 (
                     "processed_at",

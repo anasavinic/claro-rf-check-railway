@@ -16,7 +16,15 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="ImportJob",
             fields=[
-                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
                 ("original_filename", models.CharField(max_length=255)),
                 ("stored_file", models.FileField(upload_to="ep_imports/%Y/%m/%d/")),
                 ("region", models.CharField(blank=True, default="", max_length=16)),
@@ -37,8 +45,14 @@ class Migration(migrations.Migration):
                 ("counts", models.JSONField(blank=True, default=dict)),
                 ("issues", models.JSONField(blank=True, default=list)),
                 ("ignored_sheets", models.JSONField(blank=True, default=list)),
-                ("error_title", models.CharField(blank=True, default="", max_length=255)),
-                ("created_at", models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
+                (
+                    "error_title",
+                    models.CharField(blank=True, default="", max_length=255),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(db_index=True, default=django.utils.timezone.now),
+                ),
                 ("started_at", models.DateTimeField(blank=True, null=True)),
                 ("finished_at", models.DateTimeField(blank=True, null=True)),
             ],
@@ -49,9 +63,20 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="EpCell",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
                 ("technology", models.CharField(db_index=True, max_length=8)),
-                ("region", models.CharField(blank=True, db_index=True, default="", max_length=16)),
+                (
+                    "region",
+                    models.CharField(blank=True, db_index=True, default="", max_length=16),
+                ),
                 ("state", models.CharField(blank=True, default="", max_length=8)),
                 ("site_name", models.CharField(db_index=True, max_length=255)),
                 ("cell_name", models.CharField(db_index=True, max_length=255)),
@@ -60,14 +85,22 @@ class Migration(migrations.Migration):
                 (
                     "job",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, related_name="cells", to="ep_import.importjob"
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="cells",
+                        to="ep_import.importjob",
                     ),
                 ),
             ],
             options={
                 "indexes": [
-                    models.Index(fields=["job", "technology", "site_name"], name="ep_import_e_job_id_24b165_idx"),
-                    models.Index(fields=["job", "technology", "cell_name"], name="ep_import_e_job_id_ddb631_idx"),
+                    models.Index(
+                        fields=["job", "technology", "site_name"],
+                        name="ep_import_e_job_id_24b165_idx",
+                    ),
+                    models.Index(
+                        fields=["job", "technology", "cell_name"],
+                        name="ep_import_e_job_id_ddb631_idx",
+                    ),
                 ],
             },
         ),

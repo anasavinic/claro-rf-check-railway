@@ -58,7 +58,15 @@ def reconcile_stuck_check_executions() -> int:
         execution.error_code = "CHECK_STUCK"
         execution.error_title = "Processing stopped"
         execution.finished_at = timezone.now()
-        execution.save(update_fields=["status", "stage", "error_code", "error_title", "finished_at"])
+        execution.save(
+            update_fields=[
+                "status",
+                "stage",
+                "error_code",
+                "error_title",
+                "finished_at",
+            ]
+        )
         analysis = execution.analysis
         if analysis.status == CheckAnalysisStatus.PROCESSING:
             analysis.status = CheckAnalysisStatus.FAILED

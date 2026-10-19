@@ -93,7 +93,7 @@ def test_result_page_exposes_export_actions(auth_client, ep_job, user):
     assert page.status_code == 200
     export_url = reverse("reports:export", kwargs={"analysis_id": analysis.id})
     assert b"Coming soon" not in page.content
-    assert f'href="{export_url}"'.encode() in page.content
+    assert b'@click="exportReport"' in page.content
     assert b"prepareEmail('eml')" in page.content
     assert b"prepareEmail('msg')" in page.content
     email_url = reverse("reports:email", kwargs={"analysis_id": analysis.id})
@@ -147,7 +147,7 @@ def test_combined_result_exposes_export_and_email(auth_client, ep_job, user):
     assert page.status_code == 200
     export_url = reverse("reports:combined_export")
     assert b"Coming soon" not in page.content
-    assert f'href="{export_url}"'.encode() in page.content
+    assert b'@click="exportReport"' in page.content
     assert b"prepareEmail('msg')" in page.content
     assert export_url.encode() in page.content
     assert reverse("reports:combined_email").encode() in page.content

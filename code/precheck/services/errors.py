@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from claro_rf_check.celery_dispatch import (
+    BROKER_UNAVAILABLE_CODE,
+    BROKER_UNAVAILABLE_MESSAGE,
+)
+
 
 @dataclass(frozen=True)
 class PrecheckIssue:
@@ -76,6 +81,40 @@ _TECH_LABELS: dict[str, str] = {
     "4G": "4G LTE",
     "5G": "5G NR",
 }
+
+
+_PRECHECK_SIGNATURE: dict[str, frozenset[str]] = {
+    "5G": frozenset({"LST GNODEBFUNCTION", "LST GNBTRACKINGAREA"}),
+}
+_FULL_CHECK_CELL_COMMANDS: dict[str, tuple[str, ...]] = {
+    "5G": ("LST NRCELL", "LST NRDUCELL", "DSP NRDUCELL"),
+}
+
+
+def explain_precheck_uploaded_as_full_check(
+    expected_technology: str,
+    present_commands,
+    issues: list[PrecheckIssue],
+) -> list[PrecheckIssue]:
+    """Explain a Pre-check file dropped into the Full Check slot."""
+    if not any(issue.code == "MISSING_COMMAND" for issue in issues):
+        return issues
+    expected = "5G" if expected_technology == "5G NR" else expected_technology
+    signature = _PRECHECK_SIGNATURE.get(expected)
+    cell_commands = _FULL_CHECK_CELL_COMMANDS.get(expected)
+    if not signature or not cell_commands:
+        return issues
+    present = {str(command).upper() for command in present_commands}
+    if not (present & signature) or any(command in present for command in cell_commands):
+        return issues
+    found = ", ".join(command for command in ("LST GNODEBFUNCTION", "LST GNBTRACKINGAREA") if command in present)
+    label = _TECH_LABELS.get(expected, expected)
+    message = (
+        f"This file looks like a Pre-check return for {label}, not a Full Check return. "
+        f"It contains {found} and is missing the Full Check cell commands ({', '.join(cell_commands)}). "
+        "Upload the Full Check Gerência output in the Full Check slot."
+    )
+    return [PrecheckIssue(code="WRONG_CHECK_TYPE", message=message), *issues]
 
 
 def explain_missing_commands(
@@ -166,6 +205,13 @@ def analysis_busy() -> PrecheckIssue:
     )
 
 
+def broker_unavailable() -> PrecheckIssue:
+    return PrecheckIssue(
+        code=BROKER_UNAVAILABLE_CODE,
+        message=BROKER_UNAVAILABLE_MESSAGE,
+    )
+
+
 def precheck_not_selected() -> PrecheckIssue:
     return PrecheckIssue(
         code="PRECHECK_NOT_SELECTED",
@@ -200,6 +246,24 @@ def ep_field_missing(field: str) -> PrecheckIssue:
         message=f"Required EP field '{field}' is missing for the selected site cells.",
         field=field,
     )
+
+
+def cell_missing_note(cell_name: str, source: str) -> str:
+    name = cell_name or "the selected cell"
+    return (
+        f"Selected cell '{name}' was not found in the MML return ({source}). "
+        "The file may belong to a different cell or site."
+    )
+
+
+def format_issue_messages(exc: Exception) -> str:
+    """Join every user-facing issue. Views otherwise kept only the first one."""
+    issues = getattr(exc, "issues", None) or []
+    messages = [message for issue in issues if (message := getattr(issue, "message", ""))]
+    if messages:
+        return "; ".join(messages)
+    text = str(exc).strip()
+    return text or "The request could not be completed."
 
 
 def ep_field_inconsistent(field: str) -> PrecheckIssue:

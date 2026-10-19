@@ -132,7 +132,21 @@
     }
 
     .checkbox-box {
-        @apply w-6 h-6 rounded-md bg-white border border-thin-gray peer-checked:bg-dark-blue flex items-center justify-center transition-colors cursor-pointer;
+        @apply w-6 h-6 rounded-md bg-white border border-thin-gray peer-checked:bg-dark-blue peer-checked:border-dark-blue peer-checked:text-white flex items-center justify-center transition-colors cursor-pointer;
+    }
+
+    .checkbox-tick {
+        @apply opacity-0 peer-checked:opacity-100 text-white;
+    }
+
+    .peer:checked ~ .checkbox-box .checkbox-tick,
+    .peer:checked + .checkbox-box .checkbox-tick {
+        @apply opacity-100;
+    }
+
+    .peer:checked ~ .checkbox-box,
+    .peer:checked + .checkbox-box {
+        @apply bg-dark-blue border-dark-blue text-white;
     }
 
     .table-main {
@@ -458,6 +472,67 @@
 
     .btn-base {
         @apply px-14 py-2 rounded-md font-poppins font-medium transition-colors whitespace-nowrap text-center cursor-pointer inline-flex items-center justify-center;
+    }
+
+    /* Settings / RBAC UI (aligned with Claro RF Check shell) */
+    .settings-btn-primary {
+        @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold font-poppins bg-primary text-white hover:bg-primary-hover transition-colors;
+    }
+
+    .settings-btn-secondary {
+        @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold font-poppins bg-white text-secondary border border-thin-gray hover:border-primary hover:text-primary transition-colors;
+    }
+
+    .settings-btn-danger {
+        @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold font-poppins bg-white text-danger border border-danger/40 hover:bg-danger hover:text-white transition-colors;
+    }
+
+    .settings-btn-danger-solid {
+        @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold font-poppins bg-danger text-white hover:bg-danger-hover transition-colors;
+    }
+
+    .settings-card {
+        @apply bg-white border border-thin-gray rounded-xl;
+    }
+
+    .settings-card-pad {
+        @apply bg-white border border-thin-gray rounded-xl p-5;
+    }
+
+    .settings-table-wrap {
+        @apply bg-white border border-thin-gray rounded-xl overflow-hidden;
+    }
+
+    .settings-th {
+        @apply px-4 py-3 text-left font-poppins font-medium text-[11px] uppercase tracking-wide text-muted bg-readonly-gray border-b border-thin-gray;
+    }
+
+    .settings-td {
+        @apply px-4 py-3.5 text-[13px] text-secondary border-b border-thin-gray;
+    }
+
+    .settings-tr {
+        @apply hover:bg-light-blue/40 transition-colors;
+    }
+
+    .settings-tr:last-child .settings-td {
+        @apply border-b-0;
+    }
+
+    .role-chip {
+        @apply inline-flex items-center px-2.5 py-1 rounded-md bg-light-blue text-active-text text-[12px] font-medium font-poppins;
+    }
+
+    .status-pill-ok {
+        @apply inline-flex items-center px-2 py-0.5 rounded-md bg-success-bg text-success-text text-[11px] font-medium;
+    }
+
+    .status-pill-off {
+        @apply inline-flex items-center px-2 py-0.5 rounded-md bg-readonly-gray text-muted text-[11px] font-medium;
+    }
+
+    .settings-search {
+        @apply font-poppins border border-input-border rounded-md px-4 py-2 h-10 w-full max-w-sm pl-10 bg-white hover:border-blue-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
     }
 
     .action-menu-trigger {

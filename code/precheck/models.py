@@ -206,9 +206,11 @@ class CheckExecution(models.Model):
 
     class Meta:
         ordering = ("-created_at",)
+        permissions = (("view_all_jobs", "Can view all job executions"),)
         indexes = [
             models.Index(fields=["analysis", "status"]),
             models.Index(fields=["analysis", "selection_version", "pre_return_sha256", "full_return_sha256"]),
+            models.Index(fields=["created_by", "created_at"]),
         ]
 
     def __str__(self) -> str:

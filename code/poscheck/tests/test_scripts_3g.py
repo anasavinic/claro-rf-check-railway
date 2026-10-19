@@ -3,7 +3,10 @@ from pathlib import Path
 import pytest
 
 from ep_import.models import EpCell, ImportJob, ImportJobStatus
-from ep_import.services.scripts import generate_full_check_3g_script, umts_cellname_filter
+from ep_import.services.scripts import (
+    generate_full_check_3g_script,
+    umts_cellname_filter,
+)
 from poscheck.services.orchestrator import evaluate_poscheck, process_poscheck
 from poscheck.services.tech.g3.mml_parser import parse_full_check_3g_return
 from poscheck.services.tech.g3.validator import (

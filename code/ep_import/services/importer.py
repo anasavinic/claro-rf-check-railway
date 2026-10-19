@@ -9,7 +9,13 @@ from typing import BinaryIO
 
 from openpyxl import load_workbook
 
-from ep_import.schema import CELL_KEY_COLUMNS, MAX_ROW_ISSUES, SHEET_BY_TECH, Technology, region_from_filename
+from ep_import.schema import (
+    CELL_KEY_COLUMNS,
+    MAX_ROW_ISSUES,
+    SHEET_BY_TECH,
+    Technology,
+    region_from_filename,
+)
 from ep_import.services.content import validate_file_meta, validate_xlsx_package
 from ep_import.services.errors import (
     EpImportError,
@@ -23,7 +29,12 @@ from ep_import.services.layout import validate_headers, validate_sheets_present
 from ep_import.services.mapper import build_header_map, canonicalize_row
 from ep_import.services.normalizer import ImportPayload, NormalizedCell, inspect_row
 from ep_import.services.reader import list_extra_sheets, sheet_rows
-from ep_import.services.source import open_workbook_handle, owned_workbook_stream, source_name, source_size
+from ep_import.services.source import (
+    open_workbook_handle,
+    owned_workbook_stream,
+    source_name,
+    source_size,
+)
 
 ProgressFn = Callable[[str, int, int | None], None]
 CellKey = tuple[str, str, str]

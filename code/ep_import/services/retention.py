@@ -23,7 +23,12 @@ def purge_expired_imports() -> int:
         removed += 1
         logger.info(
             "ep_import.purged",
-            extra={"job_id": job_id, "correlation_id": job_id, "stage": "cleanup", "user_id": None},
+            extra={
+                "job_id": job_id,
+                "correlation_id": job_id,
+                "stage": "cleanup",
+                "user_id": None,
+            },
         )
     return removed
 

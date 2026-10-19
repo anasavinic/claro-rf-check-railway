@@ -65,3 +65,29 @@ def test_mml_parser_5g_explains_incompatible_4g_return():
     assert "not compatible with 5G NR" in exc.value.issues[0].message
     assert "4G LTE" in exc.value.issues[0].message
     assert "LST CELL" in exc.value.issues[0].message
+
+
+def test_mml_parser_5g_explains_precheck_file_in_full_check():
+    text = "\n".join(
+        [
+            "LST GNODEBFUNCTION:;",
+            "+++ S01PRCLG21",
+            "RETCODE = 0  Operation succeeded.",
+            "gNodeB ID = 1",
+            "---    END",
+            "",
+            "LST GNBTRACKINGAREA:;",
+            "+++ S01PRCLG21",
+            "RETCODE = 0  Operation succeeded.",
+            "Tracking Area Code = 1",
+            "---    END",
+            "",
+        ]
+    )
+    with pytest.raises(PoscheckParseError) as exc:
+        parse_full_check_5g_return(text)
+
+    assert exc.value.title == "Wrong return file"
+    assert exc.value.issues[0].code == "WRONG_CHECK_TYPE"
+    assert "Pre-check return" in exc.value.issues[0].message
+    assert "Full Check slot" in exc.value.issues[0].message

@@ -38,7 +38,10 @@ def test_other_user_cannot_read_job(client):
 @pytest.mark.django_db
 def test_unknown_job_is_not_found(auth_client):
     response = auth_client.get(
-        reverse("ep_import:job_status", kwargs={"job_id": "00000000-0000-0000-0000-000000000000"}),
+        reverse(
+            "ep_import:job_status",
+            kwargs={"job_id": "00000000-0000-0000-0000-000000000000"},
+        ),
         HTTP_ACCEPT="application/json",
     )
     assert response.status_code == 404

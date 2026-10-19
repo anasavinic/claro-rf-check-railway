@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser
 from django.db import transaction
 from django.urls import reverse
+from django.utils import timezone
 
+from claro_rf_check.celery_dispatch import BROKER_UNAVAILABLE_CODE
 from combined.services.combined import refresh_combined_status
 from combined.services.results import has_comparable_results
 from combined.services.returns import combined_return_ready
@@ -16,30 +21,57 @@ from precheck.models import (
     CombinedCheck,
 )
 from precheck.services.errors import PrecheckError, PrecheckIssue
-from precheck.services.execution import cancel_inflight_executions, enqueue_check_execution
-from precheck.tasks import process_check_execution
+from precheck.services.execution import (
+    cancel_inflight_executions,
+    dispatch_check_execution,
+    enqueue_check_execution,
+    mark_broker_dispatch_failed,
+)
+
+
+def _execution_is_orphan(execution: CheckExecution) -> bool:
+    return not (execution.task_id or "").strip()
+
+
+def _execution_is_timed_out(execution: CheckExecution) -> bool:
+    seconds = int(getattr(settings, "CHECK_STUCK_AFTER_SECONDS", 12 * 60))
+    anchor = execution.started_at or execution.created_at
+    if anchor is None:
+        return False
+    return anchor <= timezone.now() - timedelta(seconds=seconds)
+
+
+def _analysis_needs_recovery(analysis, inflight: list[CheckExecution]) -> bool:
+    """Recover only orphan or timed-out work — never cancel a live Celery job."""
+    if not inflight:
+        return analysis.status == CheckAnalysisStatus.PROCESSING
+    return any(_execution_is_orphan(item) or _execution_is_timed_out(item) for item in inflight)
 
 
 def recover_stuck_analyses(combined: CombinedCheck) -> int:
-    """Reset child analyses stuck in PROCESSING, including orphan inflight executions."""
+    """Reset orphan or timed-out child analyses without aborting healthy in-flight jobs."""
     recovered = 0
     for analysis in combined.analyses.all():
         inflight = list(
-            analysis.executions.filter(status__in=[CheckExecutionStatus.PENDING, CheckExecutionStatus.PROCESSING])
+            analysis.executions.filter(
+                status__in=[
+                    CheckExecutionStatus.PENDING,
+                    CheckExecutionStatus.PROCESSING,
+                ]
+            )
         )
-        stuck = analysis.status == CheckAnalysisStatus.PROCESSING
-        orphan = any(not (execution.task_id or "").strip() for execution in inflight)
-        if not stuck and not orphan and not inflight:
+        if not _analysis_needs_recovery(analysis, inflight):
             continue
-        if stuck or orphan:
-            cancel_inflight_executions(analysis, reason="STUCK_RECOVERED")
-            if analysis.status != CheckAnalysisStatus.AWAITING_RETURNS:
-                analysis.status = CheckAnalysisStatus.AWAITING_RETURNS
-                analysis.save(update_fields=["status", "updated_at"])
-            recovered += 1
+        cancel_inflight_executions(analysis, reason="STUCK_RECOVERED")
+        if analysis.status != CheckAnalysisStatus.AWAITING_RETURNS:
+            analysis.status = CheckAnalysisStatus.AWAITING_RETURNS
+            analysis.save(update_fields=["status", "updated_at"])
+        recovered += 1
     if recovered and combined.status == CheckAnalysisStatus.PROCESSING:
-        combined.status = CheckAnalysisStatus.AWAITING_RETURNS
-        combined.save(update_fields=["status", "updated_at"])
+        still_busy = combined.analyses.filter(status=CheckAnalysisStatus.PROCESSING).exists()
+        if not still_busy:
+            combined.status = CheckAnalysisStatus.AWAITING_RETURNS
+            combined.save(update_fields=["status", "updated_at"])
     return recovered
 
 
@@ -66,7 +98,12 @@ def enqueue_combined_execution(
     if not analyses:
         raise PrecheckError(
             "Could not process",
-            [PrecheckIssue(code="NO_ANALYSES", message="No analyses found for this combined check.")],
+            [
+                PrecheckIssue(
+                    code="NO_ANALYSES",
+                    message="No analyses found for this combined check.",
+                )
+            ],
         )
 
     if any(a.status == CheckAnalysisStatus.PROCESSING for a in analyses):
@@ -95,8 +132,20 @@ def enqueue_combined_execution(
         locked.status = CheckAnalysisStatus.PROCESSING
         locked.save(update_fields=["status", "updated_at"])
 
-    for execution in to_delay:
-        process_check_execution.delay(str(execution.id))
+    for index, execution in enumerate(to_delay):
+        try:
+            dispatch_check_execution(execution)
+        except PrecheckError as exc:
+            if exc.code != BROKER_UNAVAILABLE_CODE:
+                raise
+            for remaining in to_delay[index + 1 :]:
+                mark_broker_dispatch_failed(remaining)
+            with transaction.atomic():
+                locked = CombinedCheck.objects.select_for_update().get(pk=combined.pk)
+                if locked.status == CheckAnalysisStatus.PROCESSING:
+                    locked.status = CheckAnalysisStatus.FAILED
+                    locked.save(update_fields=["status", "updated_at"])
+            raise
 
     return executions
 

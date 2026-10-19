@@ -4,15 +4,16 @@ from __future__ import annotations
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import Http404, HttpRequest
+from users.permissions import user_can_view_all_jobs
 
 from ep_import.models import ImportJob
 
 
 def can_view_job(user, job: ImportJob) -> bool:
-    """Owner or staff may consult a job. View does not imply mutate."""
+    """Owner, staff, or view_all_jobs may consult a job. View does not imply mutate."""
     if not getattr(user, "is_authenticated", False):
         return False
-    if user.is_staff or user.is_superuser:
+    if user.is_staff or user.is_superuser or user_can_view_all_jobs(user):
         return True
     return job.created_by_id is not None and job.created_by_id == user.pk
 

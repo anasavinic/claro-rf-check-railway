@@ -11,6 +11,8 @@
      data-techs="{{ snapshot.technologies|join:',' }}"
      data-export-url="{{ export_url }}"
      data-email-url="{{ email_url }}"
+     data-sites="{{ snapshot.sites|join:',' }}"
+     data-categories="{{ snapshot.categories|join:',' }}"
      data-total="{{ snapshot.counts.total }}"
      data-consistent="{{ snapshot.counts.consistent }}"
      data-inconsistent="{{ snapshot.counts.inconsistent }}"
@@ -65,25 +67,52 @@
 
 		<section class="result-score">
 			<ul class="result-score__metrics">
-				<li><strong x-text="scopedTotal">{{ snapshot.counts.total }}</strong> <span>Total</span></li>
-				<li><strong class="is-ok" x-text="scopedConsistent">{{ snapshot.counts.consistent }}</strong> <span>Ready</span></li>
-				<li><strong class="is-warn" x-text="scopedFailed">{{ snapshot.counts.failed }}</strong> <span>Attention</span></li>
-				<li><strong class="is-nok" x-text="scopedInconsistent">{{ snapshot.counts.inconsistent }}</strong> <span>Issues</span></li>
+				<li><strong x-text="displayTotalCount">{{ snapshot.counts.total }}</strong> <span>Total</span></li>
+				<li><strong class="is-ok" x-text="displayConsistentCount">{{ snapshot.counts.consistent }}</strong> <span>Ready</span></li>
+				<li><strong class="is-warn" x-text="displayFailedCount">{{ snapshot.counts.failed }}</strong> <span>Attention</span></li>
+				<li><strong class="is-nok" x-text="displayInconsistentCount">{{ snapshot.counts.inconsistent }}</strong> <span>Issues</span></li>
 			</ul>
 		</section>
 
-		<div class="flex flex-wrap gap-2 items-center">
-			<button type="button"
-			        class="px-3 py-1.5 rounded-full text-[12px] border cursor-pointer"
-			        :class="techAllClass"
-			        @click="setTechAll">All</button>
-			<template x-for="tech in technologies" :key="tech">
+		<div class="flex flex-col gap-3">
+			<div class="flex flex-wrap gap-2 items-center">
+				<span class="text-[11px] uppercase font-semibold text-muted w-16 shrink-0">Tech</span>
 				<button type="button"
 				        class="px-3 py-1.5 rounded-full text-[12px] border cursor-pointer"
-				        :class="techButtonClass(tech)"
-				        @click="setTechFilter(tech)"
-				        x-text="tech"></button>
-			</template>
+				        :class="techAllClass"
+				        @click="setTechAll">All</button>
+				<template x-for="tech in technologies" :key="tech">
+					<button type="button"
+					        class="px-3 py-1.5 rounded-full text-[12px] border cursor-pointer"
+					        :class="techButtonClass(tech)"
+					        @click="setTechFilter(tech)"
+					        x-text="tech"></button>
+				</template>
+			</div>
+			<div class="flex flex-wrap gap-2 items-center" x-show="sites.length > 1" x-cloak>
+				<span class="text-[11px] uppercase font-semibold text-muted w-16 shrink-0">Site</span>
+				<button type="button"
+				        class="px-3 py-1.5 rounded-full text-[12px] border cursor-pointer"
+				        :class="siteAllClass"
+				        @click="setSiteAll">All</button>
+				<template x-for="site in sites" :key="site">
+					<button type="button"
+					        class="px-3 py-1.5 rounded-full text-[12px] border cursor-pointer"
+					        :class="siteButtonClass(site)"
+					        @click="setSiteFilter(site)"
+					        x-text="site"></button>
+				</template>
+			</div>
+			<div class="flex flex-wrap gap-2 items-center" x-show="categories.length > 0" x-cloak>
+				<span class="text-[11px] uppercase font-semibold text-muted w-16 shrink-0">Category</span>
+				<select class="bg-white border border-thin-gray rounded-lg text-[12px] px-3 py-1.5 text-secondary min-w-[180px]"
+				        @change="onCategoryChange">
+					<option value="all">All categories</option>
+					<template x-for="category in categories" :key="category">
+						<option :value="category" x-text="category"></option>
+					</template>
+				</select>
+			</div>
 		</div>
 
 		<div class="result-toolbar">
@@ -110,6 +139,7 @@
 							<th class="py-3 px-4 font-semibold">Expected</th>
 							<th class="py-3 px-4 font-semibold">Found</th>
 							<th class="py-3 px-4 font-semibold">Status</th>
+							<th class="py-3 px-4 font-semibold">Notes</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -125,6 +155,7 @@
 									      :class="statusClass(row.status)"
 									      x-text="statusLabel(row.status)"></span>
 								</td>
+								<td class="py-3 px-4 text-secondary text-[12px]" x-text="row.note || '—'"></td>
 							</tr>
 						</template>
 					</tbody>
@@ -160,33 +191,40 @@
 				</div>
 				<p class="text-[12px] leading-snug text-secondary">Upload new Gerência returns and reprocess without changing the EP selection.</p>
 			</a>
-			<div class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1">
+			<div class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1"
+			     :class="emailBusy ? 'opacity-70' : ''">
 				<div class="flex items-center gap-2">
-					<p class="flex-1 font-bold text-[14px] text-dark-blue">Prepare Email</p>
+					<p class="flex-1 font-bold text-[14px] text-dark-blue" x-text="emailTitle">Prepare Email</p>
 					<div class="bg-background flex items-center justify-center rounded-lg size-8 shrink-0">
-						<img src="{% static 'ep_import/icons/mail.svg' %}" alt="" class="size-[18px]">
+						<div x-show="emailBusy" x-cloak class="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+						<img x-show="!emailBusy" src="{% static 'ep_import/icons/mail.svg' %}" alt="" class="size-[18px]">
 					</div>
 				</div>
-				<p class="text-[12px] leading-snug text-secondary">Generate an editable email template based on the results of this analysis.</p>
+				<p class="text-[12px] leading-snug text-secondary" x-text="emailHint">Generate an editable email template based on the results of this analysis.</p>
 				<div class="flex gap-2">
 					<button type="button"
 					        @click="prepareEmail('eml')"
-					        class="px-2.5 py-1 rounded-md border border-thin-gray text-[12px] font-medium text-secondary cursor-pointer hover:border-primary hover:text-primary">.eml</button>
+					        :disabled="downloadBusy"
+					        class="px-2.5 py-1 rounded-md border border-thin-gray text-[12px] font-medium text-secondary cursor-pointer hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed">.eml</button>
 					<button type="button"
 					        @click="prepareEmail('msg')"
-					        class="px-2.5 py-1 rounded-md border border-thin-gray text-[12px] font-medium text-secondary cursor-pointer hover:border-primary hover:text-primary">.msg</button>
+					        :disabled="downloadBusy"
+					        class="px-2.5 py-1 rounded-md border border-thin-gray text-[12px] font-medium text-secondary cursor-pointer hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed">.msg</button>
 				</div>
 			</div>
-			<a href="{{ export_url }}"
-			   class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1 hover:border-primary transition-colors">
+			<button type="button"
+			        @click="exportReport"
+			        :disabled="downloadBusy"
+			        class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1 hover:border-primary transition-colors text-left disabled:opacity-70 disabled:cursor-wait">
 				<div class="flex items-center gap-2">
-					<p class="flex-1 font-bold text-[14px] text-dark-blue">Export Report</p>
+					<p class="flex-1 font-bold text-[14px] text-dark-blue" x-text="exportTitle">Export Report</p>
 					<div class="bg-background flex items-center justify-center rounded-lg size-8 shrink-0">
-						<img src="{% static 'ep_import/icons/download.svg' %}" alt="" class="size-[18px]">
+						<div x-show="exportBusy" x-cloak class="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+						<img x-show="!exportBusy" src="{% static 'ep_import/icons/download.svg' %}" alt="" class="size-[18px]">
 					</div>
 				</div>
-				<p class="text-[12px] leading-snug text-secondary">Download the generated analysis files.</p>
-			</a>
+				<p class="text-[12px] leading-snug text-secondary" x-text="exportHint">Download the generated analysis files.</p>
+			</button>
 			<a href="{% url 'combined:configure' %}"
 			   class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1 hover:border-primary transition-colors">
 				<div class="flex items-center gap-2">

@@ -61,7 +61,18 @@ def test_rejects_missing_sheet(tmp_path):
     wb = Workbook()
     ws = wb.active
     ws.title = "RNP GSM (2G)"
-    ws.append(["STATE", "SINGLE RAN NAME", "*BTS NAME", "*GSM CELL NAME", "*LAC", "*CI", "*FREQUENCY OF BCCH", "BSC"])
+    ws.append(
+        [
+            "STATE",
+            "SINGLE RAN NAME",
+            "*BTS NAME",
+            "*GSM CELL NAME",
+            "*LAC",
+            "*CI",
+            "*FREQUENCY OF BCCH",
+            "BSC",
+        ]
+    )
     ws.append(["AC", "S1", "B1", "C1", 1, 1, 1, "BSC"])
     wb.save(path)
 

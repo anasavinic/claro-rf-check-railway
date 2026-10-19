@@ -8,7 +8,7 @@ from django.conf import settings
 from django.http import HttpResponse, HttpResponseServerError
 
 
-class TestEnvironmentBasicAuthMiddleware:
+class EnvironmentBasicAuthMiddleware:
     """Protect a temporary public deployment with HTTP Basic authentication."""
 
     exempt_paths = {"/healthz"}

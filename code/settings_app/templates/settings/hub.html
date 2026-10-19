@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Settings — Claro RF Check{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen">
+	{% include "ep_import/partials/sidebar.html" %}
+	<div class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8">
+		{% include "components/flash_messages.html" %}
+		{% include "components/settings_page_header.html" with breadcrumb="Home > Settings" title="Settings" subtitle="Manage users and permission roles for Claro RF Check." %}
+
+		<div class="flex gap-3 w-full max-w-3xl">
+			<a href="{% url 'users:list' %}"
+			   class="bg-white border border-thin-gray flex flex-1 flex-col gap-3 items-start pb-5 pt-4 px-4 rounded-xl hover:border-primary transition-colors">
+				<div class="bg-light-blue flex items-center justify-center rounded-lg size-9">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-primary" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+				</div>
+				<p class="font-medium text-[13px] text-dark-blue">Users</p>
+				<p class="font-normal text-[12px] text-muted leading-snug">Assign roles and individual permissions to accounts.</p>
+			</a>
+			{% if can_manage_roles %}
+			<a href="{% url 'settings:roles-list' %}"
+			   class="bg-white border border-thin-gray flex flex-1 flex-col gap-3 items-start pb-5 pt-4 px-4 rounded-xl hover:border-primary transition-colors">
+				<div class="bg-light-blue flex items-center justify-center rounded-lg size-9">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-primary" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+				</div>
+				<p class="font-medium text-[13px] text-dark-blue">Roles</p>
+				<p class="font-normal text-[12px] text-muted leading-snug">Permission groups such as Admin, Manager, and Operator.</p>
+			</a>
+			{% endif %}
+		</div>
+	</div>
+</div>
+{% endblock %}

@@ -41,9 +41,25 @@ def build_json_logging(level: str) -> dict[str, Any]:
             "level": normalized_level,
         },
         "loggers": {
-            "gunicorn.access": {"handlers": ["console"], "level": normalized_level, "propagate": False},
-            "gunicorn.error": {"handlers": ["console"], "level": normalized_level, "propagate": False},
-            "celery": {"handlers": ["console"], "level": normalized_level, "propagate": False},
-            "celery.task": {"handlers": ["console"], "level": normalized_level, "propagate": False},
+            "gunicorn.access": {
+                "handlers": ["console"],
+                "level": normalized_level,
+                "propagate": False,
+            },
+            "gunicorn.error": {
+                "handlers": ["console"],
+                "level": normalized_level,
+                "propagate": False,
+            },
+            "celery": {
+                "handlers": ["console"],
+                "level": normalized_level,
+                "propagate": False,
+            },
+            "celery.task": {
+                "handlers": ["console"],
+                "level": normalized_level,
+                "propagate": False,
+            },
         },
     }

@@ -1,7 +1,11 @@
 import os
 
 from claro_rf_check.json_logging import build_json_logging
-from claro_rf_check.settings.hardening import require_csrf_origins, require_explicit_hosts, require_object_storage
+from claro_rf_check.settings.hardening import (
+    require_csrf_origins,
+    require_explicit_hosts,
+    require_object_storage,
+)
 
 from . import base as base_settings
 from .base import *  # noqa: F401, F403
@@ -28,7 +32,11 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_REFERRER_POLICY = "same-origin"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "True").lower() in ("1", "true", "yes")
+SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "True").lower() in (
+    "1",
+    "true",
+    "yes",
+)
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False  # must remain readable by JS / HTMX
 SESSION_COOKIE_SAMESITE = "Lax"

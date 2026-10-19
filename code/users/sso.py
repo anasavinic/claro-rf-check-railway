@@ -7,8 +7,11 @@ import hashlib
 from core_connect_sso import CoreConnectSSOError, Identity
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import Group
 from django.db import IntegrityError, transaction
 from django.http import HttpRequest
+
+from users.permissions import OPERATOR
 
 
 def username_from_identity(issuer: str, sub: str) -> str:
@@ -87,7 +90,11 @@ def map_core_connect_identity(identity: Identity, request: HttpRequest):
         raise CoreConnectSSOError("identity has no issuer; refusing to provision user")
 
     email = (identity.email or "").strip()
-    for field, value in (("core_connect_issuer", issuer), ("core_connect_sub", sub), ("email", email)):
+    for field, value in (
+        ("core_connect_issuer", issuer),
+        ("core_connect_sub", sub),
+        ("email", email),
+    ):
         if len(value) > User._meta.get_field(field).max_length:
             raise CoreConnectSSOError(f"identity {field} exceeds the local field length")
     first_name, last_name = _split_name(identity.name or "")
@@ -109,6 +116,8 @@ def map_core_connect_identity(identity: Identity, request: HttpRequest):
             defaults["avatar_url"] = avatar_url
         user, created = _create_sso_user(User, issuer=issuer, sub=sub, defaults=defaults)
         if created:
+            operator, _ = Group.objects.get_or_create(name=OPERATOR)
+            user.groups.add(operator)
             return user
 
     update_fields: list[str] = []

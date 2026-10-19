@@ -12,6 +12,12 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
+from claro_rf_check.celery_dispatch import (
+    BROKER_UNAVAILABLE_CODE,
+    BROKER_UNAVAILABLE_TITLE,
+    broker_dispatch_errors,
+    delay_task,
+)
 from poscheck.services.errors import PoscheckError
 from poscheck.services.orchestrator import (
     analysis_status_for_result,
@@ -28,7 +34,7 @@ from precheck.models import (
     CheckType,
     PrecheckResultStatus,
 )
-from precheck.services.errors import PrecheckError, analysis_busy
+from precheck.services.errors import PrecheckError, analysis_busy, broker_unavailable
 from precheck.services.validator import process_precheck
 
 logger = logging.getLogger("precheck.pipeline")
@@ -109,7 +115,10 @@ def build_process_response(execution: CheckExecution, *, created: bool) -> tuple
     elif created:
         title, message = "Analysis started", "Processing check…"
     else:
-        title, message = "Analysis already started", "This check is already being processed."
+        title, message = (
+            "Analysis already started",
+            "This check is already being processed.",
+        )
 
     payload = {
         "type": "Success",
@@ -138,9 +147,9 @@ def execution_status_payload(execution: CheckExecution) -> dict[str, Any]:
         "error_code": execution.error_code,
         "error_title": execution.error_title,
         "redirect_url": execution.redirect_url,
-        "created_at": execution.created_at.isoformat() if execution.created_at else None,
-        "started_at": execution.started_at.isoformat() if execution.started_at else None,
-        "finished_at": execution.finished_at.isoformat() if execution.finished_at else None,
+        "created_at": (execution.created_at.isoformat() if execution.created_at else None),
+        "started_at": (execution.started_at.isoformat() if execution.started_at else None),
+        "finished_at": (execution.finished_at.isoformat() if execution.finished_at else None),
         "duration_ms": duration_ms,
     }
 
@@ -162,7 +171,10 @@ def enqueue_check_execution(analysis: CheckAnalysis, *, user=None) -> tuple[Chec
                 CheckExecution.objects.select_for_update()
                 .filter(
                     analysis=locked,
-                    status__in=[CheckExecutionStatus.PENDING, CheckExecutionStatus.PROCESSING],
+                    status__in=[
+                        CheckExecutionStatus.PENDING,
+                        CheckExecutionStatus.PROCESSING,
+                    ],
                     scope=scope,
                     selection_version=selection,
                     pre_return_sha256=pre_hash,
@@ -194,7 +206,10 @@ def enqueue_check_execution(analysis: CheckAnalysis, *, user=None) -> tuple[Chec
             CheckExecution.objects.select_for_update()
             .filter(
                 analysis=locked,
-                status__in=[CheckExecutionStatus.PENDING, CheckExecutionStatus.PROCESSING],
+                status__in=[
+                    CheckExecutionStatus.PENDING,
+                    CheckExecutionStatus.PROCESSING,
+                ],
                 scope=scope,
                 selection_version=selection,
                 pre_return_sha256=pre_hash,
@@ -230,6 +245,34 @@ def enqueue_check_execution(analysis: CheckAnalysis, *, user=None) -> tuple[Chec
     return execution, True
 
 
+def mark_broker_dispatch_failed(execution: CheckExecution) -> None:
+    """Mark execution/analysis failed when Celery could not enqueue the task."""
+    now = timezone.now()
+    execution.status = CheckExecutionStatus.FAILED
+    execution.stage = CheckExecutionStage.FAILED
+    execution.error_code = BROKER_UNAVAILABLE_CODE
+    execution.error_title = BROKER_UNAVAILABLE_TITLE
+    execution.finished_at = now
+    execution.save(update_fields=["status", "stage", "error_code", "error_title", "finished_at"])
+    analysis = execution.analysis
+    if analysis.status == CheckAnalysisStatus.PROCESSING:
+        analysis.status = CheckAnalysisStatus.FAILED
+        analysis.save(update_fields=["status", "updated_at"])
+    _log(execution, "check.dispatch_failed", error_code=BROKER_UNAVAILABLE_CODE)
+
+
+def dispatch_check_execution(execution: CheckExecution) -> None:
+    """Enqueue a check execution; roll back to FAILED if the broker is down."""
+    # Lazy import avoids circular dependency with precheck.tasks.
+    from precheck.tasks import process_check_execution
+
+    try:
+        delay_task(process_check_execution, str(execution.id))
+    except broker_dispatch_errors() as exc:
+        mark_broker_dispatch_failed(execution)
+        raise PrecheckError("Could not process", [broker_unavailable()]) from exc
+
+
 def cancel_inflight_executions(analysis: CheckAnalysis, *, reason: str = "SUPERSEDED") -> int:
     """Mark pending/processing executions as failed when inputs change."""
     now = timezone.now()
@@ -244,7 +287,15 @@ def cancel_inflight_executions(analysis: CheckAnalysis, *, reason: str = "SUPERS
         execution.error_code = reason
         execution.error_title = "Execution superseded"
         execution.finished_at = now
-        execution.save(update_fields=["status", "stage", "error_code", "error_title", "finished_at"])
+        execution.save(
+            update_fields=[
+                "status",
+                "stage",
+                "error_code",
+                "error_title",
+                "finished_at",
+            ]
+        )
         _log(execution, "check.superseded", error_code=reason)
         updated += 1
     return updated
@@ -366,7 +417,16 @@ def _claim(execution: CheckExecution, task_id: str) -> CheckExecution | None:
         locked.task_id = task_id or locked.task_id
         locked.error_code = ""
         locked.error_title = ""
-        locked.save(update_fields=["status", "stage", "started_at", "task_id", "error_code", "error_title"])
+        locked.save(
+            update_fields=[
+                "status",
+                "stage",
+                "started_at",
+                "task_id",
+                "error_code",
+                "error_title",
+            ]
+        )
 
         analysis = CheckAnalysis.objects.select_for_update().get(pk=locked.analysis_id)
         if analysis.status != CheckAnalysisStatus.PROCESSING:
@@ -436,13 +496,19 @@ def _orchestrate(execution: CheckExecution, analysis: CheckAnalysis) -> tuple[st
         analysis.refresh_from_db()
         analysis.status = CheckAnalysisStatus.FAILED
         analysis.save(update_fields=["status", "updated_at"])
-        return reverse("precheck:failure", kwargs={"technology": tech}), pre_result.overall_status
+        return (
+            reverse("precheck:failure", kwargs={"technology": tech}),
+            pre_result.overall_status,
+        )
 
     if pre_result.overall_status != PrecheckResultStatus.COMPLETED:
         analysis.refresh_from_db()
         analysis.status = analysis_status_for_result(pre_result.overall_status)
         analysis.save(update_fields=["status", "updated_at"])
-        return reverse("precheck:result", kwargs={"technology": tech}), pre_result.overall_status
+        return (
+            reverse("precheck:result", kwargs={"technology": tech}),
+            pre_result.overall_status,
+        )
 
     pos_result = process_poscheck(
         analysis,

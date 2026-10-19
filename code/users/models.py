@@ -29,6 +29,7 @@ class User(AbstractUser):
     class Meta(AbstractUser.Meta):
         verbose_name = "user"
         verbose_name_plural = "users"
+        permissions = (("manage_roles", "Can manage roles and permissions"),)
         constraints = [
             models.UniqueConstraint(
                 fields=["core_connect_issuer", "core_connect_sub"],

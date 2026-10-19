@@ -12,6 +12,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
+from claro_rf_check.celery_dispatch import BROKER_UNAVAILABLE_CODE
 from combined.services.authorization import can_mutate_combined, mutable_combined, visible_combined
 from combined.services.combined import (
     SESSION_COMBINED_KEY,
@@ -24,6 +25,7 @@ from combined.services.combined import (
     sites_across_technologies,
     tech_label,
     total_cells,
+    update_combined_technologies,
 )
 from combined.services.execution import combined_process_status, enqueue_combined_execution, recover_stuck_analyses
 from combined.services.results import build_combined_result, failure_reasons, has_comparable_results
@@ -37,7 +39,7 @@ from ep_import.models import ImportJobStatus
 from ep_import.services.authorization import visible_job
 from poscheck.services.errors import PoscheckError
 from precheck.models import CheckAnalysisStatus, CombinedCheck
-from precheck.services.errors import PrecheckError
+from precheck.services.errors import PrecheckError, format_issue_messages
 
 TECH_NAV = [
     ("2G", "2G"),
@@ -143,8 +145,12 @@ def save_configure(request: HttpRequest) -> HttpResponse:
         return _json_error("Could not save", "Invalid request body.")
 
     technologies = data.get("technologies") or []
+    existing = _current_mutable(request)
     try:
-        combined = create_combined_check(user=request.user, technologies=technologies)
+        if existing is not None:
+            combined = update_combined_technologies(existing, technologies)
+        else:
+            combined = create_combined_check(user=request.user, technologies=technologies)
     except ValueError as exc:
         return _json_error("Could not save", str(exc))
 
@@ -282,8 +288,8 @@ def scripts(request: HttpRequest) -> HttpResponse:
             "full_check": combined.full_check,
             "can_import": can_mutate,
             "can_process": can_mutate and ready,
-            "upload_precheck_url": reverse("combined:upload_precheck") if can_mutate else "",
-            "upload_full_check_url": reverse("combined:upload_full_check") if can_mutate else "",
+            "upload_precheck_url": (reverse("combined:upload_precheck") if can_mutate else ""),
+            "upload_full_check_url": (reverse("combined:upload_full_check") if can_mutate else ""),
             "process_url": reverse("combined:process") if can_mutate else "",
         },
     )
@@ -310,7 +316,11 @@ def download_script(request: HttpRequest, check_type: str) -> HttpResponse:
             content = bucket["full_check_script"]
             filename = f"Claro_RF_Check_Combined_FullCheck_{technology}.txt"
         else:
-            return _json_error("Not found", "The requested check type is not part of the selection.", status=404)
+            return _json_error(
+                "Not found",
+                "The requested check type is not part of the selection.",
+                status=404,
+            )
     elif check_type == "precheck" and combined.pre_check:
         content = scripts_payload["precheck_script"]
         filename = "Claro_RF_Check_Combined_PreCheck.txt"
@@ -318,7 +328,11 @@ def download_script(request: HttpRequest, check_type: str) -> HttpResponse:
         content = scripts_payload["full_check_script"]
         filename = "Claro_RF_Check_Combined_FullCheck.txt"
     else:
-        return _json_error("Not found", "The requested check type is not part of the selection.", status=404)
+        return _json_error(
+            "Not found",
+            "The requested check type is not part of the selection.",
+            status=404,
+        )
 
     response = HttpResponse(content, content_type="text/plain; charset=utf-8")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
@@ -337,7 +351,7 @@ def upload_precheck(request: HttpRequest) -> HttpResponse:
     try:
         count = store_combined_precheck_return(combined, uploaded)
     except PrecheckError as exc:
-        return _json_error(exc.title, exc.issues[0].message if exc.issues else str(exc))
+        return _json_error(exc.title, format_issue_messages(exc))
     board = returns_board(combined)
     return JsonResponse(
         {
@@ -368,9 +382,8 @@ def upload_full_check(request: HttpRequest) -> HttpResponse:
     try:
         count = store_combined_full_check_return(combined, uploaded, technology=technology)
     except (PrecheckError, PoscheckError) as exc:
-        message = exc.issues[0].message if getattr(exc, "issues", None) else str(exc)
         title = getattr(exc, "title", "Upload error")
-        return _json_error(title, message)
+        return _json_error(title, format_issue_messages(exc))
     board = returns_board(combined)
     return JsonResponse(
         {
@@ -396,10 +409,19 @@ def process(request: HttpRequest) -> HttpResponse:
     try:
         enqueue_combined_execution(combined, user=request.user)
     except PrecheckError as exc:
-        status_code = 409 if exc.code == "ANALYSIS_BUSY" else 400
-        return _json_error(exc.title, exc.issues[0].message if exc.issues else str(exc), status=status_code)
+        if exc.code == "ANALYSIS_BUSY":
+            status_code = 409
+        elif exc.code == BROKER_UNAVAILABLE_CODE:
+            status_code = 503
+        else:
+            status_code = 400
+        return _json_error(exc.title, format_issue_messages(exc), status=status_code)
     except PermissionDenied:
-        return _json_error("Could not process", "You do not have permission to modify this analysis.", status=403)
+        return _json_error(
+            "Could not process",
+            "You do not have permission to modify this analysis.",
+            status=403,
+        )
 
     status_url = reverse("combined:process_status")
     return JsonResponse(

@@ -1,0 +1,75 @@
+<div class="settings-table-wrap">
+	<table class="w-full text-left">
+		<thead>
+			<tr>
+				<th class="settings-th">User</th>
+				<th class="settings-th">Email</th>
+				<th class="settings-th">Roles</th>
+				<th class="settings-th">Status</th>
+				<th class="settings-th w-36">Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for user in users %}
+			<tr class="settings-tr">
+				<td class="settings-td">
+					<div class="flex items-center gap-3">
+						<div class="flex items-center justify-center size-8 rounded-full bg-light-blue text-active-text text-[11px] font-semibold shrink-0">
+							{{ user.initials }}
+						</div>
+						<a href="{% url 'users:detail' user.pk %}" class="font-medium text-dark-blue hover:text-primary transition-colors">{{ user.display_name }}</a>
+					</div>
+				</td>
+				<td class="settings-td">{{ user.email|default:"—" }}</td>
+				<td class="settings-td">
+					{% with groups=user.groups.all %}
+					{% if groups %}
+					<div class="flex flex-wrap gap-1.5">
+						{% for group in groups %}
+						<span class="role-chip">{{ group.name }}</span>
+						{% endfor %}
+					</div>
+					{% else %}
+					<span class="text-muted">None</span>
+					{% endif %}
+					{% endwith %}
+				</td>
+				<td class="settings-td">
+					{% if user.is_active %}
+					<span class="status-pill-ok">Active</span>
+					{% else %}
+					<span class="status-pill-off">Inactive</span>
+					{% endif %}
+				</td>
+				<td class="settings-td">
+					<div class="flex items-center gap-3">
+						<a href="{% url 'users:detail' user.pk %}" class="text-[12px] font-medium text-primary hover:underline">View</a>
+						<a href="{% url 'users:update' user.pk %}" class="text-[12px] font-medium text-primary hover:underline">Edit</a>
+					</div>
+				</td>
+			</tr>
+			{% empty %}
+			<tr>
+				<td colspan="5" class="px-4 py-12 text-center">
+					<p class="font-medium text-[14px] text-dark-blue mb-1">No users found</p>
+					<p class="text-[13px] text-muted">Users appear here after signing in with SSO.</p>
+				</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<nav class="flex items-center justify-between mt-4 text-[13px]">
+	<span class="text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+	<div class="flex items-center gap-3">
+		{% if page_obj.has_previous %}
+		<a href="?q={{ search_q }}&page={{ page_obj.previous_page_number }}" class="settings-btn-secondary !px-3 !py-1.5 !text-[12px]">Previous</a>
+		{% endif %}
+		{% if page_obj.has_next %}
+		<a href="?q={{ search_q }}&page={{ page_obj.next_page_number }}" class="settings-btn-secondary !px-3 !py-1.5 !text-[12px]">Next</a>
+		{% endif %}
+	</div>
+</nav>
+{% endif %}

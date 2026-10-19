@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}History — Claro RF Check{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen">
+	{% include "ep_import/partials/sidebar.html" %}
+	<div class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8">
+		{% include "components/flash_messages.html" %}
+		{% include "components/settings_page_header.html" with breadcrumb="Home > History" title="History" subtitle="Execution history for Pre-check and Full Check jobs." %}
+
+		<form
+			hx-get="{% url 'precheck:history' %}"
+			hx-target="#history-table-container"
+			hx-trigger="keyup delay:400ms from:input[name='q'], change from:select, change from:input[type='date'], submit"
+			class="settings-card-pad flex flex-col gap-3"
+		>
+			<div class="flex flex-wrap items-center gap-3">
+				<div class="relative flex-1 min-w-[200px] max-w-sm">
+					<img src="{% static 'ep_import/icons/search.svg' %}" alt="" class="absolute left-3 top-1/2 -translate-y-1/2 size-4 pointer-events-none">
+					<input type="search" name="q" value="{{ search_q }}" placeholder="Search site, file, or user…" class="settings-search">
+				</div>
+				<select name="status" class="font-poppins border border-input-border rounded-md px-3 py-2 h-10 text-[13px] bg-white">
+					<option value="">All statuses</option>
+					{% for value, label in status_choices %}
+					<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+					{% endfor %}
+				</select>
+				<select name="scope" class="font-poppins border border-input-border rounded-md px-3 py-2 h-10 text-[13px] bg-white">
+					<option value="">All types</option>
+					{% for value, label in scope_choices %}
+					<option value="{{ value }}" {% if scope == value %}selected{% endif %}>{{ label }}</option>
+					{% endfor %}
+				</select>
+				<select name="technology" class="font-poppins border border-input-border rounded-md px-3 py-2 h-10 text-[13px] bg-white">
+					<option value="">All technologies</option>
+					{% for value, label in technology_choices %}
+					<option value="{{ value }}" {% if technology == value %}selected{% endif %}>{{ label }}</option>
+					{% endfor %}
+				</select>
+				{% if can_view_all_jobs %}
+				<select name="created_by" class="font-poppins border border-input-border rounded-md px-3 py-2 h-10 text-[13px] bg-white">
+					<option value="">All users</option>
+					{% for u in filter_users %}
+					<option value="{{ u.pk }}" {% if created_by == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.display_name }}</option>
+					{% endfor %}
+				</select>
+				{% endif %}
+			</div>
+			<div class="flex flex-wrap items-center gap-3">
+				<label class="flex items-center gap-2 text-[12px] text-muted">
+					<span>From</span>
+					<input type="date" name="date_from" value="{{ date_from }}" class="font-poppins border border-input-border rounded-md px-3 py-2 h-10 text-[13px] bg-white">
+				</label>
+				<label class="flex items-center gap-2 text-[12px] text-muted">
+					<span>To</span>
+					<input type="date" name="date_to" value="{{ date_to }}" class="font-poppins border border-input-border rounded-md px-3 py-2 h-10 text-[13px] bg-white">
+				</label>
+			</div>
+		</form>
+
+		<div id="history-table-container">
+			{% include "precheck/partials/history_table.html" %}
+		</div>
+	</div>
+</div>
+{% endblock %}

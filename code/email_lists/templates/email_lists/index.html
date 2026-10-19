@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Listas de e-mail — Claro RF Check{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen">
+	{% include "ep_import/partials/sidebar.html" %}
+
+	<div class="bg-background flex flex-1 flex-col gap-6 min-w-0 overflow-auto p-8">
+		<div class="flex flex-col gap-1.5 w-full">
+			<p class="font-normal text-[11px] uppercase text-muted">Home &gt; Listas de e-mail</p>
+			<p class="font-semibold text-[20px] text-dark-blue">Listas de e-mail</p>
+			<p class="font-normal text-[13px] text-secondary">Inclua endereços digitados ou a partir de um CSV do Outlook.</p>
+		</div>
+
+		<div id="email-list-feedback" class="flex flex-col gap-2 w-full">
+			{% include "email_lists/partials/messages.html" %}
+		</div>
+
+		<div class="bg-white border border-thin-gray flex flex-col gap-5 p-6 rounded-xl w-full"
+		     x-data="emailListForm">
+			<div class="flex items-center justify-between gap-4 w-full">
+				<div class="min-w-0">
+					<p class="font-semibold text-[14px] text-dark-blue">Adicionar endereços</p>
+					<p class="font-normal text-[12px] text-muted mt-1">Digite os e-mails, envie um CSV, ou faça os dois. Cada endereço precisa ter @.</p>
+				</div>
+				<a href="{% url 'email_lists:guide' %}"
+				   class="bg-white border border-thin-gray px-4 py-2 rounded-lg text-[13px] font-semibold text-secondary shrink-0">
+					Guide
+				</a>
+			</div>
+			<form method="post"
+			      action="{% url 'email_lists:import_csv' %}"
+			      enctype="multipart/form-data"
+			      hx-post="{% url 'email_lists:import_csv' %}"
+			      hx-target="#email-list-feedback"
+			      hx-swap="innerHTML show:none"
+			      hx-encoding="multipart/form-data"
+			      class="flex flex-col gap-4 w-full">
+				{% csrf_token %}
+				<div class="flex gap-4 w-full">
+					<label class="flex flex-1 items-center gap-2 border rounded-lg px-4 py-3 cursor-pointer text-[13px] font-medium text-dark-blue"
+					       :class="newListClass">
+						<input type="radio" name="mode" value="new" checked class="accent-primary" @change="selectNew">
+						Nova lista
+					</label>
+					<label class="flex flex-1 items-center gap-2 border rounded-lg px-4 py-3 cursor-pointer text-[13px] font-medium text-dark-blue"
+					       :class="existingListClass">
+						<input type="radio" name="mode" value="existing" class="accent-primary" @change="selectExisting">
+						Lista existente
+					</label>
+				</div>
+				<div x-show="showNewList">
+					<label class="flex flex-col gap-2 text-[13px] text-dark-blue w-full">
+						<span class="font-medium">Nome da lista</span>
+						<input type="text" name="name" maxlength="120" placeholder="Nome da lista"
+						       class="w-full border border-thin-gray rounded-lg px-4 py-2 text-[13px] focus:outline-none focus:border-primary">
+					</label>
+				</div>
+				<div x-show="showExistingList" x-cloak>
+					<label class="flex flex-col gap-2 text-[13px] text-dark-blue w-full">
+						<span class="font-medium">Lista</span>
+						{% include "email_lists/partials/list_options.html" %}
+					</label>
+				</div>
+				<label class="flex flex-col gap-2 text-[13px] text-dark-blue w-full">
+					<span class="font-medium">Endereços</span>
+					<textarea name="addresses" rows="4" placeholder="Separe por vírgula, ponto e vírgula ou linha. Ex.: ana@claro.com.br"
+					          class="w-full border border-thin-gray rounded-lg px-4 py-3 text-[13px] focus:outline-none focus:border-primary"></textarea>
+				</label>
+				<label class="bg-background border border-dashed border-thin-gray flex flex-col gap-2 items-center justify-center px-4 py-6 rounded-lg w-full cursor-pointer">
+					<img src="{% static 'ep_import/icons/upload-cloud.svg' %}" alt="" class="size-5">
+					<p class="font-medium text-[13px] text-dark-blue text-center">CSV do Outlook</p>
+					<p class="font-normal text-[12px] text-muted text-center">Clique aqui para escolher o arquivo. Coluna obrigatória: E-mail Address. Até 5 MB.</p>
+					<p class="font-medium text-[12px] text-primary text-center" x-text="fileLabel">Nenhum arquivo selecionado</p>
+					<input type="file" name="file" accept=".csv,text/csv" class="hidden" @change="onFileChosen">
+				</label>
+				<button type="submit" class="bg-primary text-white w-full px-4 py-3 rounded-lg text-[13px] font-semibold">
+					Incluir endereços
+				</button>
+			</form>
+		</div>
+
+		{% include "email_lists/partials/saved_lists.html" %}
+	</div>
+</div>
+{% endblock %}

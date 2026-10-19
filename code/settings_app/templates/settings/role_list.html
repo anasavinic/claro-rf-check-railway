@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Roles — Claro RF Check{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen">
+	{% include "ep_import/partials/sidebar.html" %}
+	<div class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8">
+		{% include "components/flash_messages.html" %}
+
+		<div class="flex items-end justify-between gap-4 w-full">
+			{% include "components/settings_page_header.html" with breadcrumb="Home > Settings > Roles" title="Roles" subtitle="Permission groups that control access across the application." %}
+			{% if can_create_roles %}
+			<a href="{% url 'settings:roles-create' %}" class="settings-btn-primary shrink-0">Create role</a>
+			{% endif %}
+		</div>
+
+		<form
+			hx-get="{% url 'settings:roles-list' %}"
+			hx-target="#role-table-container"
+			hx-trigger="keyup delay:400ms from:input[name='q'], submit"
+			class="settings-card-pad flex items-center gap-3"
+		>
+			<div class="relative flex-1 max-w-sm">
+				<img src="{% static 'ep_import/icons/search.svg' %}" alt="" class="absolute left-3 top-1/2 -translate-y-1/2 size-4 pointer-events-none">
+				<input type="search" name="q" value="{{ search_q }}" placeholder="Search roles…" class="settings-search">
+			</div>
+		</form>
+
+		<div id="role-table-container">
+			{% include "settings/partials/role_table.html" %}
+		</div>
+	</div>
+</div>
+{% endblock %}

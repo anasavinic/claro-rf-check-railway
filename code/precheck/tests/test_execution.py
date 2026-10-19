@@ -5,7 +5,9 @@ from pathlib import Path
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from kombu.exceptions import OperationalError as KombuOperationalError
 
+from claro_rf_check.celery_dispatch import BROKER_UNAVAILABLE_CODE, BROKER_UNAVAILABLE_MESSAGE
 from ep_import.models import EpCell, ImportJob, ImportJobStatus
 from precheck.models import (
     CheckAnalysis,
@@ -15,7 +17,12 @@ from precheck.models import (
     PrecheckResult,
 )
 from precheck.services.analysis import SESSION_ANALYSIS_KEY
-from precheck.services.execution import enqueue_check_execution, run_check_execution
+from precheck.services.errors import PrecheckError
+from precheck.services.execution import (
+    dispatch_check_execution,
+    enqueue_check_execution,
+    run_check_execution,
+)
 from precheck.services.returns import store_precheck_return
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -98,7 +105,8 @@ def test_process_endpoint_eager_returns_redirect(auth_client, user):
     session.save()
 
     response = auth_client.post(
-        reverse("precheck:process", kwargs={"technology": "5G"}), HTTP_ACCEPT="application/json"
+        reverse("precheck:process", kwargs={"technology": "5G"}),
+        HTTP_ACCEPT="application/json",
     )
     assert response.status_code == 200
     body = response.json()
@@ -127,3 +135,56 @@ def test_reupload_clears_result_and_allows_new_execution(user):
     second, created = enqueue_check_execution(analysis, user=user)
     assert created is True
     assert second.id != first.id
+
+
+@pytest.mark.django_db
+def test_dispatch_check_execution_broker_down_marks_failed(user, monkeypatch):
+    analysis = _analysis_with_return(user)
+    execution, created = enqueue_check_execution(analysis, user=user)
+    assert created is True
+    analysis.refresh_from_db()
+    assert analysis.status == CheckAnalysisStatus.PROCESSING
+
+    monkeypatch.setattr(
+        "precheck.services.execution.delay_task",
+        lambda *args, **kwargs: (_ for _ in ()).throw(KombuOperationalError("broker down")),
+    )
+
+    with pytest.raises(PrecheckError) as exc_info:
+        dispatch_check_execution(execution)
+
+    assert exc_info.value.code == BROKER_UNAVAILABLE_CODE
+    execution.refresh_from_db()
+    analysis.refresh_from_db()
+    assert execution.status == CheckExecutionStatus.FAILED
+    assert execution.error_code == BROKER_UNAVAILABLE_CODE
+    assert analysis.status == CheckAnalysisStatus.FAILED
+
+
+@pytest.mark.django_db
+def test_process_endpoint_broker_down_returns_error_toast_payload(auth_client, user, monkeypatch):
+    analysis = _analysis_with_return(user)
+    session = auth_client.session
+    session[SESSION_ANALYSIS_KEY] = str(analysis.id)
+    session.save()
+
+    monkeypatch.setattr(
+        "precheck.services.execution.delay_task",
+        lambda *args, **kwargs: (_ for _ in ()).throw(ConnectionError("broker down")),
+    )
+
+    response = auth_client.post(
+        reverse("precheck:process", kwargs={"technology": "5G"}),
+        HTTP_ACCEPT="application/json",
+    )
+    assert response.status_code == 503
+    body = response.json()
+    assert body["type"] == "Error"
+    assert body["title"] == "Could not process"
+    assert body["message"] == BROKER_UNAVAILABLE_MESSAGE
+
+    analysis.refresh_from_db()
+    assert analysis.status == CheckAnalysisStatus.FAILED
+    execution = CheckExecution.objects.get(analysis=analysis)
+    assert execution.status == CheckExecutionStatus.FAILED
+    assert execution.error_code == BROKER_UNAVAILABLE_CODE

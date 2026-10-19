@@ -77,10 +77,13 @@ INSTALLED_APPS = [
     "tailwind",
     "theme",
     "users",
+    "settings_app",
     "home",
     "ep_import",
+    "email_lists",
     "precheck",
     "poscheck",
+    "results",
     "reports",
     "combined",
 ]
@@ -298,6 +301,33 @@ CELERY_TASK_ALWAYS_EAGER = os.getenv("CELERY_TASK_ALWAYS_EAGER", "false").lower(
 )
 CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_WORKER_CONCURRENCY = int(os.getenv("CELERY_WORKER_CONCURRENCY", "2") or 2)
+
+# Fail broker publishes quickly so the web request can return a toast instead of hanging.
+# Workers still reconnect via broker_connection_retry_on_startup / consumer ensure.
+CELERY_BROKER_CONNECTION_TIMEOUT = float(os.getenv("CELERY_BROKER_CONNECTION_TIMEOUT", "2") or 2)
+CELERY_BROKER_CONNECTION_MAX_RETRIES = int(os.getenv("CELERY_BROKER_CONNECTION_MAX_RETRIES", "1") or 1)
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    "socket_connect_timeout": CELERY_BROKER_CONNECTION_TIMEOUT,
+    "socket_timeout": CELERY_BROKER_CONNECTION_TIMEOUT,
+    "retry_on_timeout": False,
+    "max_retries": CELERY_BROKER_CONNECTION_MAX_RETRIES,
+    "interval_start": 0,
+    "interval_step": 0.2,
+    "interval_max": 0.5,
+}
+CELERY_TASK_PUBLISH_RETRY = True
+CELERY_TASK_PUBLISH_RETRY_POLICY = {
+    "max_retries": 1,
+    "interval_start": 0,
+    "interval_step": 0.2,
+    "interval_max": 0.5,
+}
+# Same socket timeouts for the Redis result backend (used unless ignore_result=True).
+CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {
+    "socket_connect_timeout": CELERY_BROKER_CONNECTION_TIMEOUT,
+    "socket_timeout": CELERY_BROKER_CONNECTION_TIMEOUT,
+    "retry_on_timeout": False,
+}
 
 # Session cookies (SSO-friendly names; secure flags tightened in staging/production)
 SESSION_COOKIE_NAME = os.environ.get("SESSION_COOKIE_NAME", "claro_rf_check_sessionid")

@@ -63,11 +63,19 @@ def reconcile_stuck_imports() -> int:
         job.save(update_fields=["status", "stage", "error_title", "issues", "finished_at"])
         logger.info(
             "ep_import.reconciled",
-            extra={"job_id": str(job.id), "stage": job.stage, "error_code": "IMPORT_STUCK", "user_id": None},
+            extra={
+                "job_id": str(job.id),
+                "stage": job.stage,
+                "error_code": "IMPORT_STUCK",
+                "user_id": None,
+            },
         )
         updated += 1
     if updated:
-        logger.info("ep_import.reconciled_total", extra={"rows": updated, "message": SAFE_STUCK_MESSAGE})
+        logger.info(
+            "ep_import.reconciled_total",
+            extra={"rows": updated, "message": SAFE_STUCK_MESSAGE},
+        )
     return updated
 
 
@@ -86,9 +94,17 @@ def ensure_ep_import_schedules() -> None:
     quarter, _created = IntervalSchedule.objects.get_or_create(every=15, period=IntervalSchedule.MINUTES)
     PeriodicTask.objects.update_or_create(
         name="ep_import.purge_expired_imports",
-        defaults={"task": "ep_import.purge_expired_imports", "interval": hourly, "enabled": True},
+        defaults={
+            "task": "ep_import.purge_expired_imports",
+            "interval": hourly,
+            "enabled": True,
+        },
     )
     PeriodicTask.objects.update_or_create(
         name="ep_import.reconcile_stuck_imports",
-        defaults={"task": "ep_import.reconcile_stuck_imports", "interval": quarter, "enabled": True},
+        defaults={
+            "task": "ep_import.reconcile_stuck_imports",
+            "interval": quarter,
+            "enabled": True,
+        },
     )

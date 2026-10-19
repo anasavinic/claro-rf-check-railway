@@ -95,6 +95,50 @@ def test_configure_starts_with_no_technologies_selected(auth_client):
 
 
 @pytest.mark.django_db
+def test_reconfigure_updates_the_session_check(auth_client):
+    job = _ready_multi_tech_job(user=auth_client.user)
+    first = auth_client.post(
+        reverse("combined:save_configure"),
+        data=json.dumps({"technologies": ["4G", "5G"]}),
+        content_type="application/json",
+    )
+    combined_id = first.json()["combined_id"]
+    auth_client.post(
+        reverse("combined:generate_scripts"),
+        data=json.dumps({"job_id": str(job.id), "sites": ["SITE_A"]}),
+        content_type="application/json",
+    )
+
+    same = auth_client.post(
+        reverse("combined:save_configure"),
+        data=json.dumps({"technologies": ["5G", "4G"]}),
+        content_type="application/json",
+    )
+    assert same.json()["combined_id"] == combined_id
+    combined = CombinedCheck.objects.get(pk=combined_id)
+    assert combined.technologies == ["5G", "4G"]
+    assert combined.site_names == ["SITE_A"]
+    assert combined.analyses.count() == 2
+    assert combined.ep_job_id == job.id
+    assert CombinedCheck.objects.count() == 1
+
+    changed = auth_client.post(
+        reverse("combined:save_configure"),
+        data=json.dumps({"technologies": ["3G", "4G"]}),
+        content_type="application/json",
+    )
+    assert changed.json()["combined_id"] == combined_id
+    combined.refresh_from_db()
+    assert combined.technologies == ["3G", "4G"]
+    assert combined.pre_check is False
+    assert combined.site_names == []
+    assert combined.status == CheckAnalysisStatus.DRAFT
+    assert combined.analyses.count() == 0
+    assert combined.ep_job_id == job.id
+    assert CombinedCheck.objects.count() == 1
+
+
+@pytest.mark.django_db
 def test_configure_and_materialize_flow(auth_client):
     job = _ready_multi_tech_job(user=auth_client.user)
 
@@ -262,8 +306,68 @@ def test_full_check_upload_unlocks_processing_analyses(auth_client):
 
 
 @pytest.mark.django_db
+def test_enqueue_combined_broker_down_marks_failed(auth_client, monkeypatch):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    from claro_rf_check.celery_dispatch import BROKER_UNAVAILABLE_CODE
+    from combined.services.execution import enqueue_combined_execution
+    from precheck.models import CheckExecution, CheckExecutionStatus
+    from precheck.services.errors import PrecheckError
+
+    job = _ready_multi_tech_job(user=auth_client.user)
+    auth_client.post(
+        reverse("combined:save_configure"),
+        data=json.dumps({"technologies": ["4G", "5G"]}),
+        content_type="application/json",
+    )
+    auth_client.post(
+        reverse("combined:generate_scripts"),
+        data=json.dumps({"job_id": str(job.id), "sites": ["SITE_A"]}),
+        content_type="application/json",
+    )
+    for tech, name, body in (
+        ("4G", "full_4g.txt", b"RETCODE = 0\nLST CELL"),
+        ("5G", "full_5g.txt", b"RETCODE = 0\nLST NRCELL"),
+    ):
+        assert (
+            auth_client.post(
+                reverse("combined:upload_full_check"),
+                data={"technology": tech, "file": SimpleUploadedFile(name, body)},
+            ).status_code
+            == 200
+        )
+    assert (
+        auth_client.post(
+            reverse("combined:upload_precheck"),
+            data={"file": SimpleUploadedFile("pre_5g.txt", b"RETCODE = 0\nLST NRCELL")},
+        ).status_code
+        == 200
+    )
+    combined = CombinedCheck.objects.get(pk=auth_client.session[SESSION_COMBINED_KEY])
+
+    monkeypatch.setattr(
+        "precheck.services.execution.delay_task",
+        lambda *args, **kwargs: (_ for _ in ()).throw(ConnectionError("broker down")),
+    )
+
+    with pytest.raises(PrecheckError) as exc_info:
+        enqueue_combined_execution(combined, user=auth_client.user)
+
+    assert exc_info.value.code == BROKER_UNAVAILABLE_CODE
+    combined.refresh_from_db()
+    assert combined.status == CheckAnalysisStatus.FAILED
+    assert all(a.status == CheckAnalysisStatus.FAILED for a in combined.analyses.all())
+    assert CheckExecution.objects.filter(
+        analysis__combined_check=combined,
+        status=CheckExecutionStatus.FAILED,
+        error_code=BROKER_UNAVAILABLE_CODE,
+    ).exists()
+
+
+@pytest.mark.django_db
 def test_recover_stuck_processing_before_reprocess(auth_client):
     from combined.services.execution import recover_stuck_analyses
+    from precheck.models import CheckExecution, CheckExecutionScope, CheckExecutionStatus
 
     job = _ready_multi_tech_job(user=auth_client.user)
     auth_client.post(
@@ -280,6 +384,12 @@ def test_recover_stuck_processing_before_reprocess(auth_client):
     for analysis in combined.analyses.all():
         analysis.status = CheckAnalysisStatus.PROCESSING
         analysis.save(update_fields=["status", "updated_at"])
+        CheckExecution.objects.create(
+            analysis=analysis,
+            status=CheckExecutionStatus.PROCESSING,
+            scope=CheckExecutionScope.FULL_CHECK,
+            task_id="",
+        )
     combined.status = CheckAnalysisStatus.PROCESSING
     combined.save(update_fields=["status", "updated_at"])
 
@@ -291,9 +401,128 @@ def test_recover_stuck_processing_before_reprocess(auth_client):
 
 
 @pytest.mark.django_db
+def test_recover_does_not_cancel_live_celery_jobs(auth_client):
+    from combined.services.execution import recover_stuck_analyses
+    from precheck.models import CheckExecution, CheckExecutionScope, CheckExecutionStatus
+
+    job = _ready_multi_tech_job(user=auth_client.user)
+    auth_client.post(
+        reverse("combined:save_configure"),
+        data=json.dumps({"technologies": ["4G", "5G"]}),
+        content_type="application/json",
+    )
+    auth_client.post(
+        reverse("combined:generate_scripts"),
+        data=json.dumps({"job_id": str(job.id), "sites": ["SITE_A"]}),
+        content_type="application/json",
+    )
+    combined = CombinedCheck.objects.get(pk=auth_client.session[SESSION_COMBINED_KEY])
+    for analysis in combined.analyses.all():
+        analysis.status = CheckAnalysisStatus.PROCESSING
+        analysis.save(update_fields=["status", "updated_at"])
+        CheckExecution.objects.create(
+            analysis=analysis,
+            status=CheckExecutionStatus.PROCESSING,
+            scope=CheckExecutionScope.FULL_CHECK,
+            task_id="live-celery-task-id",
+        )
+    combined.status = CheckAnalysisStatus.PROCESSING
+    combined.save(update_fields=["status", "updated_at"])
+
+    assert recover_stuck_analyses(combined) == 0
+    combined.refresh_from_db()
+    assert combined.status == CheckAnalysisStatus.PROCESSING
+    assert all(a.status == CheckAnalysisStatus.PROCESSING for a in combined.analyses.all())
+
+
+@pytest.mark.django_db
+def test_process_status_prefers_result_when_partial_success(auth_client, monkeypatch):
+    from combined.services import execution as execution_mod
+
+    job = _ready_multi_tech_job(user=auth_client.user)
+    auth_client.post(
+        reverse("combined:save_configure"),
+        data=json.dumps({"technologies": ["4G", "5G"]}),
+        content_type="application/json",
+    )
+    auth_client.post(
+        reverse("combined:generate_scripts"),
+        data=json.dumps({"job_id": str(job.id), "sites": ["SITE_A"]}),
+        content_type="application/json",
+    )
+    combined = CombinedCheck.objects.get(pk=auth_client.session[SESSION_COMBINED_KEY])
+    analyses = list(combined.analyses.order_by("technology"))
+    analyses[0].status = CheckAnalysisStatus.COMPLETED
+    analyses[0].save(update_fields=["status", "updated_at"])
+    analyses[1].status = CheckAnalysisStatus.FAILED
+    analyses[1].save(update_fields=["status", "updated_at"])
+    combined.status = CheckAnalysisStatus.FAILED
+    combined.save(update_fields=["status", "updated_at"])
+
+    monkeypatch.setattr(execution_mod, "has_comparable_results", lambda _combined: True)
+
+    payload = execution_mod.combined_process_status(combined)
+    assert payload["finished"] is True
+    assert payload["failed"] >= 1
+    assert payload["redirect_url"] == reverse("combined:result")
+
+
+@pytest.mark.django_db
+def test_failure_reasons_lists_each_failed_return(auth_client):
+    from combined.services.results import failure_reasons
+    from poscheck.models import PoscheckResult
+    from precheck.models import CheckAnalysis, PrecheckResult, PrecheckResultStatus
+
+    job = _ready_multi_tech_job(user=auth_client.user)
+    combined = CombinedCheck.objects.create(
+        created_by=auth_client.user,
+        ep_job=job,
+        technologies=["4G", "5G"],
+        site_names=["SITE_A"],
+        pre_check=True,
+        full_check=True,
+        status=CheckAnalysisStatus.FAILED,
+    )
+    analysis = CheckAnalysis.objects.create(
+        created_by=auth_client.user,
+        ep_job=job,
+        combined_check=combined,
+        technology="5G",
+        site_name="SITE_A",
+        selected_cells=["NR_1"],
+        pre_check=True,
+        full_check=True,
+        status=CheckAnalysisStatus.FAILED,
+    )
+    PrecheckResult.objects.create(
+        analysis=analysis,
+        overall_status=PrecheckResultStatus.EXECUTION_FAILURE,
+        error_code="MISSING_COMMAND",
+        error_title="Execution failure",
+        error_detail="Command 'LST GNODEBFUNCTION' was not found in the return file.",
+    )
+    PoscheckResult.objects.create(
+        analysis=analysis,
+        overall_status=PrecheckResultStatus.EXECUTION_FAILURE,
+        error_code="WRONG_CHECK_TYPE",
+        error_title="Wrong return file",
+        error_detail="This file looks like a Pre-check return for 5G NR, not a Full Check return.",
+    )
+
+    reasons = failure_reasons(combined)
+
+    assert [item["check_type"] for item in reasons] == ["Pre-check", "Full Check"]
+    assert reasons[0]["code"] == "MISSING_COMMAND"
+    assert reasons[0]["technology"] == "5G NR"
+    assert reasons[1]["title"] == "Wrong return file"
+    assert "Pre-check return" in reasons[1]["detail"]
+
+
+@pytest.mark.django_db
 def test_sidebar_hides_reports_and_settings(auth_client):
     response = auth_client.get(reverse("home:index"))
     assert response.status_code == 200
     assert b"Reports" not in response.content
     assert b"Settings" not in response.content
     assert b"Combined RF check" in response.content
+    assert b"Monitoring" not in response.content

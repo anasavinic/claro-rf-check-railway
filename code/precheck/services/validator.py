@@ -31,7 +31,11 @@ from precheck.services.errors import (
     selected_cells_missing,
     technology_not_supported,
 )
-from precheck.services.mml_parser import PrecheckExtraction, parse_precheck_return, parse_precheck_return_bytes
+from precheck.services.mml_parser import (
+    PrecheckExtraction,
+    parse_precheck_return,
+    parse_precheck_return_bytes,
+)
 
 EP_GNBID_KEY: Final[str] = "gNBId"
 EP_TRACKING_AREA_KEY: Final[str] = "Tracking Area ID"
@@ -197,7 +201,7 @@ def get_precheck_snapshot(analysis_id: UUID | str) -> dict[str, Any] | None:
         "error_code": result.error_code,
         "error_title": result.error_title,
         "error_detail": result.error_detail,
-        "processed_at": result.processed_at.isoformat() if result.processed_at else None,
+        "processed_at": (result.processed_at.isoformat() if result.processed_at else None),
     }
 
 

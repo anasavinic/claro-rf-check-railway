@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from precheck.models import CheckAnalysis, CheckExecution, CheckReturnFile, CombinedCheck, PrecheckResult
+from precheck.models import (
+    CheckAnalysis,
+    CheckExecution,
+    CheckReturnFile,
+    CombinedCheck,
+    PrecheckResult,
+)
 
 
 @admin.register(CombinedCheck)
@@ -25,7 +31,15 @@ class CheckReturnFileInline(admin.TabularInline):
 class CheckExecutionInline(admin.TabularInline):
     model = CheckExecution
     extra = 0
-    fields = ("scope", "status", "stage", "result_status", "task_id", "created_at", "finished_at")
+    fields = (
+        "scope",
+        "status",
+        "stage",
+        "result_status",
+        "task_id",
+        "created_at",
+        "finished_at",
+    )
     readonly_fields = fields
     can_delete = False
     show_change_link = True
@@ -69,7 +83,13 @@ class CheckAnalysisAdmin(admin.ModelAdmin):
     )
     list_filter = ("technology", "status", "pre_check", "full_check")
     search_fields = ("site_name",)
-    readonly_fields = ("id", "created_at", "updated_at", "selected_cells", "combined_check")
+    readonly_fields = (
+        "id",
+        "created_at",
+        "updated_at",
+        "selected_cells",
+        "combined_check",
+    )
     raw_id_fields = ("combined_check", "ep_job")
     inlines = [CheckReturnFileInline, CheckExecutionInline, PrecheckResultInline]
 

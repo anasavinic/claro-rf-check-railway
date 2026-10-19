@@ -21,9 +21,16 @@
 			{% if failure_reasons %}
 			<ul class="flex flex-col gap-3">
 				{% for reason in failure_reasons %}
-				<li class="text-[13px] text-secondary leading-relaxed">
-					<span class="font-semibold text-dark-blue">{{ reason.technology }} · {{ reason.site_name }}</span>
-					— {{ reason.detail }}
+				<li class="border border-thin-gray rounded-lg p-3 flex flex-col gap-1">
+					<p class="font-semibold text-[13px] text-dark-blue">{{ reason.technology }} · {{ reason.site_name }}</p>
+					<p class="text-[12px] text-muted">
+						{% if reason.check_type %}{{ reason.check_type }}{% else %}Return{% endif %}
+						{% if reason.code %} · {{ reason.code }}{% endif %}
+					</p>
+					{% if reason.title %}
+					<p class="text-[13px] font-medium text-dark-blue">{{ reason.title }}</p>
+					{% endif %}
+					<p class="text-[13px] text-secondary leading-relaxed">{{ reason.detail }}</p>
 				</li>
 				{% endfor %}
 			</ul>

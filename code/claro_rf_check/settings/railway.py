@@ -72,7 +72,7 @@ LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 MIDDLEWARE = [
-    "claro_rf_check.test_auth.TestEnvironmentBasicAuthMiddleware",
+    "claro_rf_check.test_auth.EnvironmentBasicAuthMiddleware",
     *[item for item in MIDDLEWARE if item != "users.middleware.IdentityRefreshMiddleware"],
 ]
 

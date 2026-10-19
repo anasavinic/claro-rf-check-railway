@@ -1,0 +1,85 @@
+<div class="settings-table-wrap">
+	<table class="w-full text-left">
+		<thead>
+			<tr>
+				<th class="settings-th">When</th>
+				{% if can_view_all_jobs %}
+				<th class="settings-th">User</th>
+				{% endif %}
+				<th class="settings-th">Type</th>
+				<th class="settings-th">Technology</th>
+				<th class="settings-th">Site</th>
+				<th class="settings-th">Status</th>
+				<th class="settings-th w-28">Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for execution in executions %}
+			<tr class="settings-tr">
+				<td class="settings-td whitespace-nowrap">{{ execution.created_at|date:"Y-m-d H:i" }}</td>
+				{% if can_view_all_jobs %}
+				<td class="settings-td">
+					{% if execution.created_by %}
+					{{ execution.created_by.display_name }}
+					{% else %}
+					<span class="text-muted">—</span>
+					{% endif %}
+				</td>
+				{% endif %}
+				<td class="settings-td">{{ execution.get_scope_display }}</td>
+				<td class="settings-td">
+					{% if execution.analysis.technology == "5G" %}5G NR{% else %}{{ execution.analysis.technology }}{% endif %}
+				</td>
+				<td class="settings-td">{{ execution.analysis.site_name }}</td>
+				<td class="settings-td">
+					{% if execution.status == "success" %}
+					<span class="status-pill-ok">{{ execution.get_status_display }}</span>
+					{% elif execution.status == "failed" %}
+					<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-danger/10 text-danger text-[11px] font-medium">{{ execution.get_status_display }}</span>
+					{% else %}
+					<span class="status-pill-off">{{ execution.get_status_display }}</span>
+					{% endif %}
+				</td>
+				<td class="settings-td">
+					{% if execution.redirect_url %}
+					<a href="{% url 'precheck:history_open' execution.id %}" class="text-[12px] font-medium text-primary hover:underline">View</a>
+					{% else %}
+					<span class="text-muted text-[12px]">—</span>
+					{% endif %}
+				</td>
+			</tr>
+			{% empty %}
+			<tr>
+				<td colspan="{% if can_view_all_jobs %}7{% else %}6{% endif %}" class="px-4 py-12 text-center">
+					<p class="font-medium text-[14px] text-dark-blue mb-1">No executions found</p>
+					<p class="text-[13px] text-muted">Job runs appear here after you process a Pre-check or Full Check.</p>
+				</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<nav class="flex items-center justify-between mt-4 text-[13px]">
+	<span class="text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+	<div class="flex items-center gap-3">
+		{% if page_obj.has_previous %}
+		<a
+			href="?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.previous_page_number }}"
+			hx-get="{% url 'precheck:history' %}?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.previous_page_number }}"
+			hx-target="#history-table-container"
+			class="settings-btn-secondary !px-3 !py-1.5 !text-[12px]"
+		>Previous</a>
+		{% endif %}
+		{% if page_obj.has_next %}
+		<a
+			href="?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.next_page_number }}"
+			hx-get="{% url 'precheck:history' %}?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.next_page_number }}"
+			hx-target="#history-table-container"
+			class="settings-btn-secondary !px-3 !py-1.5 !text-[12px]"
+		>Next</a>
+		{% endif %}
+	</div>
+</nav>
+{% endif %}

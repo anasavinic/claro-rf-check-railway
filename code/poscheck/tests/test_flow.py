@@ -86,7 +86,10 @@ def test_upload_and_process_full_check_3g_happy_path(auth_client):
     assert upload.status_code == 200
     assert upload.json()["type"] == "Success"
 
-    process = auth_client.post(reverse("precheck:process", kwargs={"technology": "3G"}), HTTP_ACCEPT="application/json")
+    process = auth_client.post(
+        reverse("precheck:process", kwargs={"technology": "3G"}),
+        HTTP_ACCEPT="application/json",
+    )
     assert process.status_code == 200
     body = process.json()
     assert body["type"] == "Success"
@@ -98,7 +101,7 @@ def test_upload_and_process_full_check_3g_happy_path(auth_client):
     result_page = auth_client.get(reverse("poscheck:result"))
     assert result_page.status_code == 200
     assert b"Full Check" in result_page.content
-    assert f'href="{reverse("reports:export", kwargs={"analysis_id": analysis.id})}"'.encode() in result_page.content
+    assert b'@click="exportReport"' in result_page.content
 
 
 def _ready_5g_job(user=None):
@@ -190,7 +193,10 @@ def test_upload_and_process_full_check_5g_happy_path(auth_client):
     assert upload.status_code == 200
     assert upload.json()["type"] == "Success"
 
-    process = auth_client.post(reverse("precheck:process", kwargs={"technology": "5G"}), HTTP_ACCEPT="application/json")
+    process = auth_client.post(
+        reverse("precheck:process", kwargs={"technology": "5G"}),
+        HTTP_ACCEPT="application/json",
+    )
     assert process.status_code == 200
     body = process.json()
     assert body["type"] == "Success"
@@ -203,4 +209,4 @@ def test_upload_and_process_full_check_5g_happy_path(auth_client):
     assert result_page.status_code == 200
     assert b"Full Check" in result_page.content
     assert b"gNodeB ID" in result_page.content
-    assert f'href="{reverse("reports:export", kwargs={"analysis_id": analysis.id})}"'.encode() in result_page.content
+    assert b'@click="exportReport"' in result_page.content

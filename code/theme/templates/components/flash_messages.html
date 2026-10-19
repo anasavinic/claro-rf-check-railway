@@ -1,0 +1,12 @@
+{% if messages %}
+<div class="flex flex-col gap-2 w-full">
+	{% for message in messages %}
+	<div class="flex items-start gap-3 rounded-xl border px-4 py-3
+		{% if message.tags == 'error' %}border-danger/30 bg-danger/5 text-danger
+		{% elif message.tags == 'success' %}border-success/30 bg-success-bg text-success-text
+		{% else %}border-thin-gray bg-white text-dark-blue{% endif %}">
+		<p class="font-normal text-[13px] flex-1">{{ message }}</p>
+	</div>
+	{% endfor %}
+</div>
+{% endif %}

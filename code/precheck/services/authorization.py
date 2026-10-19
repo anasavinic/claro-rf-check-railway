@@ -3,21 +3,50 @@
 from __future__ import annotations
 
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db.models import QuerySet
 from django.http import Http404, HttpRequest
+from users.permissions import user_can_view_all_jobs
 
 from ep_import.services.authorization import can_mutate_job, can_view_job
-from precheck.models import CheckAnalysis
+from precheck.models import CheckAnalysis, CheckExecution
 
 
 def can_view_analysis(user, analysis: CheckAnalysis) -> bool:
-    """Owner of the analysis, or staff who can view the linked EP job."""
+    """Owner of the analysis, view_all_jobs, or staff who can view the linked EP job."""
     if not getattr(user, "is_authenticated", False):
         return False
+    if user_can_view_all_jobs(user):
+        return True
     if analysis.created_by_id is not None and analysis.created_by_id == user.pk:
         return True
     if analysis.created_by_id is None and can_mutate_job(user, analysis.ep_job):
         return True
     return can_view_job(user, analysis.ep_job)
+
+
+def can_view_execution(user, execution: CheckExecution) -> bool:
+    """Owner of the execution, view_all_jobs, or viewers of the linked analysis."""
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if user_can_view_all_jobs(user):
+        return True
+    if execution.created_by_id is not None and execution.created_by_id == user.pk:
+        return True
+    return can_view_analysis(user, execution.analysis)
+
+
+def visible_executions_queryset(user) -> QuerySet[CheckExecution]:
+    """History list scope: all executions with view_all_jobs, otherwise own only."""
+    qs = CheckExecution.objects.select_related(
+        "analysis",
+        "analysis__ep_job",
+        "created_by",
+    ).order_by("-created_at")
+    if not getattr(user, "is_authenticated", False):
+        return qs.none()
+    if user_can_view_all_jobs(user):
+        return qs
+    return qs.filter(created_by_id=user.pk)
 
 
 def can_mutate_analysis(user, analysis: CheckAnalysis) -> bool:

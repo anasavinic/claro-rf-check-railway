@@ -11,6 +11,7 @@ from ep_import.services.scripts import FULL_CHECK_5G_COMMANDS
 from poscheck.services.errors import (
     PoscheckError,
     PoscheckIssue,
+    cell_missing_note,
     ep_field_inconsistent,
     ep_field_missing,
     full_check_not_selected,
@@ -154,7 +155,7 @@ def compare_full_check_5g(expected: EpExpected5GValues, extraction: FullCheck5GE
                     "expected": expected_cell.cell_name,
                     "found": "",
                     "status": VALIDATION_STATUS_INCONSISTENT,
-                    "note": "Cell was not found in LST NRCELL / LST NRDUCELL return.",
+                    "note": cell_missing_note(expected_cell.cell_name, "LST NRCELL / LST NRDUCELL"),
                     "cell_name": expected_cell.cell_name,
                 }
             )

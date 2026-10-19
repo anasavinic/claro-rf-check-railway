@@ -92,7 +92,16 @@ def _write_summary(sheet: Worksheet, payload: ExportPayload) -> None:
 
     start = 3 + len(rows) + 1
     sheet.cell(start, 1, "Results by check type").font = _TITLE_FONT
-    headers = ("Check type", "Status", "Date", "Total", "OK", "Warnings", "NOK", "Score")
+    headers = (
+        "Check type",
+        "Status",
+        "Date",
+        "Total",
+        "OK",
+        "Warnings",
+        "NOK",
+        "Score",
+    )
     header_row = start + 1
     for col, header in enumerate(headers, start=1):
         cell = sheet.cell(header_row, col, header)

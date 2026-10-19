@@ -55,16 +55,22 @@
 						</button>
 						<div class="flex flex-nowrap items-center gap-2 shrink-0">
 							{% if card.precheck_script %}
-							<a href="{{ card.download_precheck_url }}"
-							   class="bg-white border border-primary text-primary px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap">
-								Download Pre-check
-							</a>
+							<button type="button"
+							        class="bg-white border border-primary text-primary px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap cursor-pointer disabled:opacity-60 disabled:cursor-wait inline-flex items-center gap-2"
+							        :disabled="downloadBusy"
+							        @click="downloadScript('pre-{{ card.technology }}', '{{ card.download_precheck_url }}', 'Claro_RF_Check_PreCheck_{{ card.technology }}.txt', 'Script downloaded')">
+								<span x-show="scriptBusy('pre-{{ card.technology }}')" x-cloak class="size-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+								<span x-text="scriptBusy('pre-{{ card.technology }}') ? 'Downloading…' : 'Download Pre-check'">Download Pre-check</span>
+							</button>
 							{% endif %}
 							{% if card.full_check_script %}
-							<a href="{{ card.download_full_check_url }}"
-							   class="bg-primary text-white px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap">
-								Download Full Check
-							</a>
+							<button type="button"
+							        class="bg-primary text-white px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap cursor-pointer disabled:opacity-60 disabled:cursor-wait inline-flex items-center gap-2"
+							        :disabled="downloadBusy"
+							        @click="downloadScript('full-{{ card.technology }}', '{{ card.download_full_check_url }}', 'Claro_RF_Check_FullCheck_{{ card.technology }}.txt', 'Script downloaded')">
+								<span x-show="scriptBusy('full-{{ card.technology }}')" x-cloak class="size-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+								<span x-text="scriptBusy('full-{{ card.technology }}') ? 'Downloading…' : 'Download Full Check'">Download Full Check</span>
+							</button>
 							{% endif %}
 						</div>
 					</div>

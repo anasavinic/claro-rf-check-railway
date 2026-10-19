@@ -33,41 +33,36 @@
 			<p class="font-semibold text-[14px] text-dark-blue w-full">EP file</p>
 			<p class="font-normal text-[12px] text-secondary -mt-2">Import a regional EP workbook covering the selected technologies.</p>
 
-			<template x-if="!jobId">
-				<label class="bg-background border border-dashed border-thin-gray flex flex-col gap-2 items-center justify-center px-4 py-6 rounded-lg w-full cursor-pointer hover:border-primary transition-colors"
-				       @dragover.prevent
-				       @drop.prevent="onDrop">
-					<div class="bg-light-blue flex items-center justify-center rounded-full size-9">
-						<img src="{% static 'ep_import/icons/upload-cloud.svg' %}" alt="" class="size-5">
-					</div>
-					<p class="font-medium text-[13px] text-dark-blue text-center">Drag the EP file here or click to select</p>
-					<p class="font-normal text-[11px] text-muted text-center">Accepted formats: .xlsx</p>
-					<input type="file" class="hidden" accept=".xlsx" @change="onFileSelected">
-				</label>
-			</template>
-
-			<template x-if="jobId && isProcessing">
-				<div class="flex items-center justify-between w-full gap-4">
-					<div>
-						<p class="font-medium text-[13px] text-dark-blue" x-text="epFileName"></p>
-						<p class="text-[12px] text-muted mt-1" x-text="processingLabel"></p>
-					</div>
-					<div class="size-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+			<label x-show="!jobId"
+			       x-cloak
+			       class="bg-background border border-dashed border-thin-gray flex flex-col gap-2 items-center justify-center px-4 py-6 rounded-lg w-full cursor-pointer hover:border-primary transition-colors"
+			       @dragover.prevent
+			       @drop.prevent="onDrop">
+				<div class="bg-light-blue flex items-center justify-center rounded-full size-9">
+					<img src="{% static 'ep_import/icons/upload-cloud.svg' %}" alt="" class="size-5">
 				</div>
-			</template>
+				<p class="font-medium text-[13px] text-dark-blue text-center">Drag the EP file here or click to select</p>
+				<p class="font-normal text-[11px] text-muted text-center">Accepted formats: .xlsx</p>
+				<input type="file" class="hidden" x-ref="epFileInput" accept=".xlsx" @change="onFileSelected">
+			</label>
 
-			<template x-if="jobId && !isProcessing">
-				<div class="flex items-center justify-between w-full gap-4">
-					<div class="min-w-0">
-						<p class="font-medium text-[13px] text-dark-blue truncate" x-text="epFileName"></p>
-						<p class="text-[12px] text-muted mt-1" x-text="sitesCountLabel"></p>
-					</div>
-					<button type="button"
-					        class="bg-white border border-thin-gray px-4 py-2 rounded-lg text-[13px] font-semibold text-secondary hover:border-primary shrink-0 cursor-pointer"
-					        @click="pickFile">Replace file</button>
-					<input type="file" class="hidden" x-ref="epFileInput" accept=".xlsx" @change="onFileSelected">
+			<div x-show="jobId && isProcessing" x-cloak class="flex items-center justify-between w-full gap-4">
+				<div>
+					<p class="font-medium text-[13px] text-dark-blue" x-text="epFileName"></p>
+					<p class="text-[12px] text-muted mt-1" x-text="processingLabel"></p>
 				</div>
-			</template>
+				<div class="size-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+			</div>
+
+			<div x-show="jobId && !isProcessing" x-cloak class="flex items-center justify-between w-full gap-4">
+				<div class="min-w-0">
+					<p class="font-medium text-[13px] text-dark-blue truncate" x-text="epFileName"></p>
+					<p class="text-[12px] text-muted mt-1" x-text="sitesCountLabel"></p>
+				</div>
+				<button type="button"
+				        class="bg-white border border-thin-gray px-4 py-2 rounded-lg text-[13px] font-semibold text-secondary hover:border-primary shrink-0 cursor-pointer"
+				        @click="pickFile">Replace file</button>
+			</div>
 		</section>
 
 		<section class="bg-white border border-thin-gray flex flex-col gap-4 p-5 rounded-xl w-full min-h-0">

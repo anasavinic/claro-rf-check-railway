@@ -74,13 +74,13 @@ ARG GITLAB_PYPI_TOKEN
 COPY requirements.txt /tmp/requirements.txt
 
 RUN set -eu; \
-    pip install --upgrade pip; \
     if [ -z "${GITLAB_PYPI_TOKEN}" ]; then \
       echo "GITLAB_PYPI_TOKEN is required to install core-connect-sso from the GitLab Package Registry." >&2; \
       exit 1; \
     fi; \
-    pip wheel --wheel-dir /wheels -r /tmp/requirements.txt \
-      --extra-index-url "https://${GITLAB_PYPI_USER}:${GITLAB_PYPI_TOKEN}@gitlab.com/api/v4/projects/${CORE_CONNECT_SSO_PROJECT_ID}/packages/pypi/simple"
+    pip install --upgrade pip; \
+    PIP_EXTRA_INDEX_URL="https://${GITLAB_PYPI_USER}:${GITLAB_PYPI_TOKEN}@gitlab.com/api/v4/projects/${CORE_CONNECT_SSO_PROJECT_ID}/packages/pypi/simple" \
+        pip wheel --wheel-dir /wheels -r /tmp/requirements.txt
 
 # ----
 # Railway runtime. This must stay the last stage: Railway builds the final target.

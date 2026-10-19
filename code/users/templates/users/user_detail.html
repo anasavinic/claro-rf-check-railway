@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ object.display_name }} — Users{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen">
+	{% include "ep_import/partials/sidebar.html" %}
+	<div class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8">
+		{% include "components/flash_messages.html" %}
+
+		<div class="flex items-end justify-between gap-4 w-full max-w-3xl">
+			<div class="flex items-start gap-4 flex-1 min-w-0">
+				<div class="flex items-center justify-center size-12 rounded-full bg-light-blue text-active-text text-[14px] font-semibold shrink-0">
+					{{ object.initials }}
+				</div>
+				<div class="flex flex-col gap-1 min-w-0">
+					<p class="font-normal text-[11px] uppercase text-muted">Home &gt; Settings &gt; Users &gt; Detail</p>
+					<p class="font-semibold text-[20px] text-dark-blue truncate">{{ object.display_name }}</p>
+					<p class="font-normal text-[13px] text-secondary truncate">{{ object.email|default:object.username }}</p>
+				</div>
+			</div>
+			<a href="{% url 'users:update' object.pk %}" class="settings-btn-primary shrink-0">Edit user</a>
+		</div>
+
+		<div class="settings-card-pad max-w-3xl flex flex-col gap-6">
+			<div>
+				<p class="font-semibold text-[14px] text-dark-blue mb-1">Roles</p>
+				<p class="font-normal text-[12px] text-muted mb-3">Permission groups assigned to this user.</p>
+				{% if object.groups.all %}
+				<div class="flex flex-wrap gap-2">
+					{% for group in object.groups.all %}
+					<span class="role-chip">{{ group.name }}</span>
+					{% endfor %}
+				</div>
+				{% else %}
+				<p class="text-[13px] text-muted">No roles assigned.</p>
+				{% endif %}
+			</div>
+
+			<div class="border-t border-thin-gray pt-5">
+				<p class="font-semibold text-[14px] text-dark-blue mb-1">Extra permissions</p>
+				<p class="font-normal text-[12px] text-muted mb-3">Overrides for this user only.</p>
+				{% if object.user_permissions.all %}
+				<ul class="flex flex-col gap-1.5">
+					{% for perm in object.user_permissions.all %}
+					<li class="text-[13px] text-secondary font-poppins bg-background border border-thin-gray rounded-lg px-3 py-2">
+						{{ perm.content_type.app_label }}.{{ perm.codename }}
+					</li>
+					{% endfor %}
+				</ul>
+				{% else %}
+				<p class="text-[13px] text-muted">No individual permissions.</p>
+				{% endif %}
+			</div>
+
+			<div class="border-t border-thin-gray pt-5 grid grid-cols-2 gap-4">
+				<div>
+					<p class="text-[12px] text-muted mb-1">Status</p>
+					{% if object.is_active %}
+					<span class="status-pill-ok">Active</span>
+					{% else %}
+					<span class="status-pill-off">Inactive</span>
+					{% endif %}
+				</div>
+				<div>
+					<p class="text-[12px] text-muted mb-1">SSO</p>
+					{% if object.core_connect_sub %}
+					<span class="status-pill-ok">Bound</span>
+					{% else %}
+					<span class="status-pill-off">Local</span>
+					{% endif %}
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}

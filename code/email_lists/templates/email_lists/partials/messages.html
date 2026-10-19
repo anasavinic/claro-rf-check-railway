@@ -1,0 +1,5 @@
+{% for message in messages %}
+<div class="rounded-lg border px-5 py-3 text-[13px] {% if 'error' in message.tags %}border-danger/30 bg-[#FEF2F2] text-danger{% else %}border-success/30 bg-success-bg text-success-text{% endif %}">
+	{{ message }}
+</div>
+{% endfor %}

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit User — Claro RF Check{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen">
+	{% include "ep_import/partials/sidebar.html" %}
+	<div class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8">
+		{% include "components/flash_messages.html" %}
+		<div class="flex flex-col gap-1 items-start flex-1 min-w-0">
+			<p class="font-normal text-[11px] uppercase text-muted w-full">Home &gt; Settings &gt; Users &gt; Edit</p>
+			<p class="font-semibold text-[20px] text-dark-blue w-full">Edit user</p>
+			<p class="font-normal text-[13px] text-secondary w-full">Update profile and role assignments for {{ object.display_name }}.</p>
+		</div>
+
+		<form method="post" class="flex flex-col gap-5 w-full max-w-4xl" data-perm-picker x-data="extraPermModal" @keydown.window="onKeydown">
+			{% csrf_token %}
+
+			<div class="settings-card-pad flex flex-col gap-4">
+				<div class="flex flex-col gap-1">
+					<p class="font-semibold text-[14px] text-dark-blue">Profile</p>
+					<p class="font-normal text-[12px] text-muted">Identity fields synced from SSO stay linked to Core Connect.</p>
+				</div>
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+					<label class="flex flex-col gap-1.5">
+						<span class="text-[12px] font-medium text-secondary">First name</span>
+						{{ form.first_name }}
+					</label>
+					<label class="flex flex-col gap-1.5">
+						<span class="text-[12px] font-medium text-secondary">Last name</span>
+						{{ form.last_name }}
+					</label>
+				</div>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-[12px] font-medium text-secondary">Email</span>
+					{{ form.email }}
+				</label>
+				<label class="inline-flex items-center gap-2.5 cursor-pointer select-none pt-1">
+					{{ form.is_active }}
+					<span class="text-[13px] text-dark-blue font-medium">Active account</span>
+				</label>
+			</div>
+
+			{% if can_edit_rbac %}
+			<div class="settings-card-pad flex flex-col gap-5">
+				<div class="flex flex-col gap-1">
+					<p class="font-semibold text-[14px] text-dark-blue">Roles &amp; permissions</p>
+					<p class="font-normal text-[12px] text-muted">Roles grant a set of permissions; extras apply only to this user.</p>
+				</div>
+
+				<div>
+					<p class="text-[13px] font-semibold text-dark-blue mb-1">Roles</p>
+					<p class="text-[12px] text-muted mb-3">Permission groups assigned to this user.</p>
+					<div class="flex flex-wrap gap-2.5">
+						{% for group in form.groups.field.queryset %}
+						<label class="flex items-center gap-2.5 cursor-pointer border border-thin-gray rounded-xl px-3.5 py-2.5 bg-background hover:border-primary hover:bg-light-blue/40 transition-colors">
+							<input
+								type="checkbox"
+								name="groups"
+								value="{{ group.pk }}"
+								class="sr-only peer"
+								{% if group.pk in selected_group_ids %}checked{% endif %}
+							>
+							<span class="checkbox-box shrink-0" aria-hidden="true">
+								<svg class="checkbox-tick" width="12" height="12" viewBox="0 0 12 12" fill="none">
+									<path d="M2.5 6.2L4.8 8.5L9.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+								</svg>
+							</span>
+							<span class="text-[13px] font-poppins text-dark-blue font-medium">{{ group.name }}</span>
+						</label>
+						{% empty %}
+						<p class="text-[13px] text-muted m-0">No roles defined yet. Create one under Settings → Roles.</p>
+						{% endfor %}
+					</div>
+				</div>
+
+				<div class="border-t border-thin-gray pt-5">
+					<div class="flex flex-wrap items-center justify-between gap-4">
+						<div>
+							<p class="text-[13px] font-semibold text-dark-blue mb-1">Extra permissions</p>
+							<p class="text-[12px] text-muted m-0">Overrides for this user only. They stack on top of assigned roles.</p>
+						</div>
+						<button type="button" @click="openModal" class="settings-btn-secondary">
+							Manage extras
+							<span data-perm-count data-perm-count-format="{n}"
+							      class="role-chip !py-0.5">0</span>
+						</button>
+					</div>
+				</div>
+
+				<div class="fixed inset-0 z-[1000] flex items-center justify-center bg-dark-blue/40 p-4"
+				     x-show="open"
+				     x-cloak
+				     x-transition.opacity.duration.150ms
+				     @click.self="closeModal"
+				     role="dialog"
+				     aria-modal="true">
+					<div class="bg-white rounded-xl shadow-lg max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col border border-thin-gray" @click.stop>
+						<div class="p-5 border-b border-thin-gray flex items-center justify-between gap-4 shrink-0 bg-background">
+							<div>
+								<p class="font-semibold text-[16px] text-dark-blue m-0">Extra permissions</p>
+								<p class="text-[12px] text-muted m-0 mt-0.5">Select user-specific overrides.</p>
+							</div>
+							<button type="button" @click="closeModal" class="text-muted hover:text-dark-blue p-2 rounded-lg hover:bg-white transition-colors" aria-label="Close">
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+							</button>
+						</div>
+						{% include "components/permission_picker_toolbar.html" with extra_class="p-4 border-b border-thin-gray bg-white shrink-0" %}
+						<div class="p-5 overflow-y-auto flex-1 bg-background">
+							{% include "components/permission_modules.html" with input_name="user_permissions" grid_class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" %}
+						</div>
+						<div class="p-4 border-t border-thin-gray flex justify-end shrink-0 bg-white">
+							<button type="button" @click="closeModal" class="settings-btn-primary">Done</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			{% endif %}
+
+			<div class="flex items-center justify-end gap-3">
+				<a href="{% url 'users:list' %}" class="settings-btn-secondary">Cancel</a>
+				<button type="submit" class="settings-btn-primary">Save changes</button>
+			</div>
+		</form>
+	</div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{% static 'js/components/permission_picker.js' %}"></script>
+{% endblock %}

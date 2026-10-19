@@ -6,9 +6,26 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-from ep_import.schema import CELL_KEY_COLUMNS, SHEET_BY_TECH, SITE_KEY_COLUMNS, Technology, region_from_filename
-from ep_import.services.errors import EpImportError, EpImportIssue, empty_sheet, missing_row_key
-from ep_import.services.mapper import build_header_map, canonicalize_row, cell_name, on_air_status, site_name
+from ep_import.schema import (
+    CELL_KEY_COLUMNS,
+    SHEET_BY_TECH,
+    SITE_KEY_COLUMNS,
+    Technology,
+    region_from_filename,
+)
+from ep_import.services.errors import (
+    EpImportError,
+    EpImportIssue,
+    empty_sheet,
+    missing_row_key,
+)
+from ep_import.services.mapper import (
+    build_header_map,
+    canonicalize_row,
+    cell_name,
+    on_air_status,
+    site_name,
+)
 
 
 @dataclass

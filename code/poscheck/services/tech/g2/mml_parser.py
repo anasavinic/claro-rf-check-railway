@@ -108,7 +108,10 @@ def parse_full_check_2g_return(text: str) -> FullCheck2GExtraction:
         enriched.append(block)
     blocks = enriched
 
-    gcell = next((block for block in blocks if block.command.upper() == FULL_CHECK_COMMAND_GCELL), None)
+    gcell = next(
+        (block for block in blocks if block.command.upper() == FULL_CHECK_COMMAND_GCELL),
+        None,
+    )
     if gcell is None:
         raise PoscheckParseError(
             "Execution failure",

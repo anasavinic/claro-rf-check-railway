@@ -36,7 +36,12 @@ def test_secure_settings_force_cookies_https_and_logout(config):
 
 
 @pytest.mark.parametrize(
-    "name", ["CORE_CONNECT_SSO_ISSUER", "CORE_CONNECT_SSO_REDIRECT_URI", "CORE_CONNECT_SSO_INTERNAL_ISSUER"]
+    "name",
+    [
+        "CORE_CONNECT_SSO_ISSUER",
+        "CORE_CONNECT_SSO_REDIRECT_URI",
+        "CORE_CONNECT_SSO_INTERNAL_ISSUER",
+    ],
 )
 @pytest.mark.parametrize(
     "url",
@@ -54,7 +59,12 @@ def test_invalid_transport_urls_are_rejected(config, name, url):
 
 
 @pytest.mark.parametrize(
-    "name", ["CORE_CONNECT_SSO_ISSUER", "CORE_CONNECT_SSO_CLIENT_ID", "CORE_CONNECT_SSO_REDIRECT_URI"]
+    "name",
+    [
+        "CORE_CONNECT_SSO_ISSUER",
+        "CORE_CONNECT_SSO_CLIENT_ID",
+        "CORE_CONNECT_SSO_REDIRECT_URI",
+    ],
 )
 def test_missing_required_settings_are_rejected(config, name):
     config[name] = " "
@@ -89,7 +99,12 @@ def test_redirect_requires_an_explicit_allowed_host(config, monkeypatch, hosts):
 
 
 @pytest.mark.parametrize(
-    "path", ["/wrong/callback/", "/claro-rf/sso/callback/?next=x", "/claro-rf/sso/callback/#fragment"]
+    "path",
+    [
+        "/wrong/callback/",
+        "/claro-rf/sso/callback/?next=x",
+        "/claro-rf/sso/callback/#fragment",
+    ],
 )
 def test_redirect_must_reach_the_actual_callback(config, path):
     config["CORE_CONNECT_SSO_REDIRECT_URI"] = "https://rf.example.com" + path
@@ -133,5 +148,11 @@ def test_real_settings_modules_apply_secure_policy(config, monkeypatch, module):
         "assert not s.CORE_CONNECT_SSO_ALLOW_INSECURE_TRANSPORT; "
         "assert s.CORE_CONNECT_SSO_REFRESH_FAILURE_ACTION == 'logout'"
     )
-    result = subprocess.run([sys.executable, "-c", source], env=env, capture_output=True, text=True, timeout=30)
+    result = subprocess.run(
+        [sys.executable, "-c", source],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
     assert result.returncode == 0, result.stderr

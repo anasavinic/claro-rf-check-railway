@@ -61,19 +61,35 @@ def create_combined_check(
     user: AbstractBaseUser | None,
     technologies: list[str],
 ) -> CombinedCheck:
-    techs = _normalize_technologies(technologies)
-    if len(techs) < 2:
-        raise ValueError("Select at least two technologies.")
-
-    has_5g = "5G" in techs
+    techs = _require_technologies(technologies)
     return CombinedCheck.objects.create(
         created_by=user if getattr(user, "is_authenticated", False) else None,
         technologies=techs,
         site_names=[],
-        pre_check=has_5g,
+        pre_check="5G" in techs,
         full_check=True,
         status=CheckAnalysisStatus.DRAFT,
     )
+
+
+@transaction.atomic
+def update_combined_technologies(combined: CombinedCheck, technologies: list[str]) -> CombinedCheck:
+    """Reuse the session check. A different technology set drops sites and child analyses."""
+    techs = _require_technologies(technologies)
+    previous = list(combined.technologies or [])
+    if previous == techs:
+        return combined
+
+    combined.technologies = techs
+    combined.pre_check = "5G" in techs
+    update_fields = ["technologies", "pre_check", "updated_at"]
+    if set(previous) != set(techs):
+        combined.site_names = []
+        combined.status = CheckAnalysisStatus.DRAFT
+        update_fields.extend(["site_names", "status"])
+        combined.analyses.all().delete()
+    combined.save(update_fields=update_fields)
+    return combined
 
 
 def attach_ep_job(combined: CombinedCheck, job: ImportJob) -> CombinedCheck:
@@ -214,7 +230,11 @@ def build_scripts(combined: CombinedCheck) -> dict:
     for analysis in analyses:
         bucket = by_technology.setdefault(
             analysis.technology,
-            {"precheck_script": "", "full_check_script": "", "label": tech_label(analysis.technology)},
+            {
+                "precheck_script": "",
+                "full_check_script": "",
+                "label": tech_label(analysis.technology),
+            },
         )
         if analysis.pre_check:
             script = generate_precheck_script(
@@ -285,6 +305,13 @@ def refresh_combined_status(combined: CombinedCheck) -> str:
 
 def total_cells(combined: CombinedCheck) -> int:
     return sum(len(a.selected_cells or []) for a in combined.analyses.all())
+
+
+def _require_technologies(technologies: list[str]) -> list[str]:
+    techs = _normalize_technologies(technologies)
+    if len(techs) < 2:
+        raise ValueError("Select at least two technologies.")
+    return techs
 
 
 def _normalize_technologies(technologies: list[str]) -> list[str]:

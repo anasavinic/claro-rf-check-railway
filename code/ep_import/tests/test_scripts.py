@@ -187,7 +187,10 @@ def test_download_precheck_script(auth_client):
     session.save()
 
     response = auth_client.get(
-        reverse("ep_import:download_script", kwargs={"technology": "5G", "check_type": "precheck"})
+        reverse(
+            "ep_import:download_script",
+            kwargs={"technology": "5G", "check_type": "precheck"},
+        )
     )
 
     assert response.status_code == 200

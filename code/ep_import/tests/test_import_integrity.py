@@ -93,7 +93,13 @@ def _job_from(path: Path, tmp_path) -> ImportJob:
 def test_rejects_xls_extension(auth_client):
     response = auth_client.post(
         reverse("ep_import:upload"),
-        {"file": SimpleUploadedFile("RNP_SRAN_CO.xls", b"PK\x03\x04", content_type="application/vnd.ms-excel")},
+        {
+            "file": SimpleUploadedFile(
+                "RNP_SRAN_CO.xls",
+                b"PK\x03\x04",
+                content_type="application/vnd.ms-excel",
+            )
+        },
         HTTP_ACCEPT="application/json",
     )
     assert response.status_code == 400

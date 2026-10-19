@@ -2,8 +2,13 @@
 
 import time
 
-from core_connect_sso.contrib.django.middleware import IdentityRefreshMiddleware as SDKIdentityRefreshMiddleware
-from core_connect_sso.contrib.django.views import SESSION_ACCESS_TOKEN_KEY, SESSION_REFRESH_TOKEN_KEY
+from core_connect_sso.contrib.django.middleware import (
+    IdentityRefreshMiddleware as SDKIdentityRefreshMiddleware,
+)
+from core_connect_sso.contrib.django.views import (
+    SESSION_ACCESS_TOKEN_KEY,
+    SESSION_REFRESH_TOKEN_KEY,
+)
 from core_connect_sso.contrib.identity_refresh import jwt_exp
 from django.contrib.auth import logout
 

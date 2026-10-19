@@ -4,7 +4,11 @@ import pytest
 
 from ep_import.models import EpCell, ImportJob, ImportJobStatus
 from ep_import.services.scripts import generate_full_check_4g_script
-from poscheck.services.orchestrator import evaluate_poscheck, get_poscheck_snapshot, process_poscheck
+from poscheck.services.orchestrator import (
+    evaluate_poscheck,
+    get_poscheck_snapshot,
+    process_poscheck,
+)
 from poscheck.services.tech.g4.mml_parser import parse_full_check_4g_return
 from poscheck.services.tech.g4.validator import (
     VALIDATION_CELL_ID,

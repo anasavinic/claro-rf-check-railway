@@ -3,7 +3,10 @@ from pathlib import Path
 import pytest
 
 from ep_import.models import EpCell, ImportJob, ImportJobStatus
-from ep_import.services.scripts import apply_identifier_substitutions, generate_full_check_2g_script
+from ep_import.services.scripts import (
+    apply_identifier_substitutions,
+    generate_full_check_2g_script,
+)
 from poscheck.services.orchestrator import evaluate_poscheck, process_poscheck
 from poscheck.services.tech.g2.mml_parser import parse_full_check_2g_return
 from poscheck.services.tech.g2.validator import (
@@ -76,7 +79,12 @@ def _analysis_2g(job, cells: list[str], **kwargs):
 def test_apply_identifier_substitutions_covers_operational_keys():
     rendered = apply_identifier_substitutions(
         'LST GCELL:IDTYPE=BYNAME,BTSNAME="{BTS}"; LST X:CELL="{CELL}",CELLID={CELLID},BSC={BSC};',
-        {"BSC": "BSCES36", "BTS": "BS01ESALG01", "CELL": "22S01ESALG0101", "CELLID": "21097"},
+        {
+            "BSC": "BSCES36",
+            "BTS": "BS01ESALG01",
+            "CELL": "22S01ESALG0101",
+            "CELLID": "21097",
+        },
     )
     assert 'BTSNAME="BS01ESALG01"' in rendered
     assert 'CELL="22S01ESALG0101"' in rendered

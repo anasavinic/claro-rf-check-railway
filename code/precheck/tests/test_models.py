@@ -90,7 +90,11 @@ def test_precheck_result_stores_extraction(ep_job):
                 "note": "Matches EP gNBId.",
             }
         ],
-        extracted={"gnodeb_id": "1060541", "tracking_area_code": "4151041", "ne_name": "S01PRCLG21"},
+        extracted={
+            "gnodeb_id": "1060541",
+            "tracking_area_code": "4151041",
+            "ne_name": "S01PRCLG21",
+        },
     )
 
     assert analysis.precheck_result.overall_status == PrecheckResultStatus.COMPLETED

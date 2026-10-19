@@ -1,0 +1,9 @@
+<select id="existing-list-select"
+        name="email_list"
+        {% if oob %}hx-swap-oob="outerHTML"{% endif %}
+        class="w-full border border-thin-gray rounded-lg px-4 py-2 text-[13px] bg-white focus:outline-none focus:border-primary">
+	<option value="">Selecione</option>
+	{% for item in lists %}
+	<option value="{{ item.pk }}" {% if selected.pk == item.pk %}selected{% endif %}>{{ item.name }}</option>
+	{% endfor %}
+</select>

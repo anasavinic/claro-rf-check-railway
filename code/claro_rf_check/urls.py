@@ -12,7 +12,7 @@ handler404 = "home.views.custom_404"
 
 claro_rf_patterns = [
     # SSO (Core Connect)
-    path("sso/", include("users.urls")),
+    path("sso/", include("users.sso_urls")),
 ]
 
 urlpatterns = [
@@ -21,10 +21,13 @@ urlpatterns = [
     path("accounts/", include("django.contrib.auth.urls")),
     path("admin/", admin.site.urls),
     path("claro-rf/", include(claro_rf_patterns)),
+    path("settings/", include("settings_app.urls")),
+    path("users/", include("users.urls")),
     path("", include("precheck.urls")),
     path("", include("poscheck.urls")),
     path("", include("reports.urls")),
     path("", include("ep_import.urls")),
+    path("", include("email_lists.urls")),
     path("", include("combined.urls")),
     path("", include("home.urls")),
 ]
@@ -36,5 +39,5 @@ if settings.DEBUG and "django_browser_reload" in settings.INSTALLED_APPS:
 
 # Media is local only in DEBUG. Production serves the private bucket, not this app.
 # Static files are served by WhiteNoise, not django.views.static.
-if settings.DEBUG:
+if settings.DEBUG or getattr(settings, "DESKTOP_MODE", False):
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

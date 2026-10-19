@@ -18,13 +18,23 @@ from ep_import.services.errors import (
     import_timed_out,
     unexpected_failure,
 )
-from ep_import.services.importer import ValidationResult, iter_valid_cells, validate_workbook
+from ep_import.services.importer import (
+    ValidationResult,
+    iter_valid_cells,
+    validate_workbook,
+)
 from ep_import.services.normalizer import NormalizedCell
 from ep_import.services.source import owned_workbook_stream
 
 logger = logging.getLogger("ep_import")
 
-_TRANSIENT_ERRORS = (OperationalError, InterfaceError, ConnectionError, TimeoutError, TransientImportError)
+_TRANSIENT_ERRORS = (
+    OperationalError,
+    InterfaceError,
+    ConnectionError,
+    TimeoutError,
+    TransientImportError,
+)
 
 
 def process_job(job: ImportJob, *, task_id: str = "") -> ImportJob:
@@ -47,11 +57,26 @@ def process_job(job: ImportJob, *, task_id: str = "") -> ImportJob:
                 )
                 stream.seek(0)
                 _progress(job, ImportStage.PERSISTING, 0, result.row_count)
-                _persist_stream(job, iter_valid_cells(stream, job.original_filename, result.region), result)
+                _persist_stream(
+                    job,
+                    iter_valid_cells(stream, job.original_filename, result.region),
+                    result,
+                )
     except EpImportError as exc:
-        return _fail(job, exc.title, [issue.as_dict() for issue in exc.issues], started, exc.issues[0].code)
+        return _fail(
+            job,
+            exc.title,
+            [issue.as_dict() for issue in exc.issues],
+            started,
+            exc.issues[0].code,
+        )
     except _TRANSIENT_ERRORS as exc:
-        _log(job, "ep_import.retry", error_code=type(exc).__name__, duration_ms=_elapsed(started))
+        _log(
+            job,
+            "ep_import.retry",
+            error_code=type(exc).__name__,
+            duration_ms=_elapsed(started),
+        )
         raise TransientImportError("transient import failure") from exc
     except Exception as exc:
         if type(exc).__name__ == "SoftTimeLimitExceeded":
@@ -170,7 +195,11 @@ def _persist_stream(job: ImportJob, cells: Iterator[NormalizedCell], result: Val
     except IntegrityError as exc:
         logger.exception(
             "ep_import.persist_rejected",
-            extra={"job_id": str(job.id), "stage": ImportStage.PERSISTING, "error_code": "DUPLICATE_CELL"},
+            extra={
+                "job_id": str(job.id),
+                "stage": ImportStage.PERSISTING,
+                "error_code": "DUPLICATE_CELL",
+            },
         )
         raise EpImportError(
             title="EP file has invalid rows",

@@ -17,7 +17,12 @@ from core_connect_sso.dev import DEFAULT_DEV_SUB, DEV_CODE
 from cryptography.hazmat.primitives.asymmetric import rsa
 from django.conf import settings
 from django.contrib import admin
-from django.contrib.auth import BACKEND_SESSION_KEY, SESSION_KEY, authenticate, get_user_model
+from django.contrib.auth import (
+    BACKEND_SESSION_KEY,
+    SESSION_KEY,
+    authenticate,
+    get_user_model,
+)
 from django.db import IntegrityError, transaction
 from django.test import Client, RequestFactory
 from django.urls import path
@@ -91,7 +96,7 @@ def complete_login():
     return complete
 
 
-def test_provisioning_is_idempotent_and_does_not_assign_roles(identity, mapping_request):
+def test_provisioning_assigns_operator_once_and_ignores_sso_roles(identity, mapping_request):
     first = map_core_connect_identity(identity, mapping_request)
     second = map_core_connect_identity(identity, mapping_request)
     assert first.pk == second.pk
@@ -100,7 +105,13 @@ def test_provisioning_is_idempotent_and_does_not_assign_roles(identity, mapping_
     assert first.email == identity.email
     assert not first.has_usable_password()
     assert not first.is_staff and not first.is_superuser
-    assert not first.groups.exists() and not first.user_permissions.exists()
+    # Default local role; IdP claim roles (e.g. Admin) are not mirrored.
+    assert list(first.groups.values_list("name", flat=True)) == ["Operator"]
+    assert not first.user_permissions.exists()
+    first.groups.clear()
+    map_core_connect_identity(identity, mapping_request)
+    first.refresh_from_db()
+    assert not first.groups.exists()
     assert "sso_just_provisioned" not in mapping_request.session
 
 
@@ -246,7 +257,10 @@ def test_admin_cannot_edit_bound_identity_or_activation(bound_user):
     assert "is_active" not in registered.get_readonly_fields(request, User(username="local"))
 
 
-@pytest.mark.parametrize("failure", ["wrong_state", "missing_state", "missing_code", "missing_verifier", "oauth_error"])
+@pytest.mark.parametrize(
+    "failure",
+    ["wrong_state", "missing_state", "missing_code", "missing_verifier", "oauth_error"],
+)
 def test_callback_rejects_invalid_or_failed_oauth_flow(client, failure):
     client.get(LOGIN)
     session = client.session
@@ -292,7 +306,10 @@ def test_logout_requires_post_and_csrf_and_clears_session(complete_login):
     assert SESSION_KEY in client.session
     client.get("/")
     csrf = client.cookies[settings.CSRF_COOKIE_NAME].value
-    tokens = (client.session[SESSION_ACCESS_TOKEN_KEY], client.session[SESSION_REFRESH_TOKEN_KEY])
+    tokens = (
+        client.session[SESSION_ACCESS_TOKEN_KEY],
+        client.session[SESSION_REFRESH_TOKEN_KEY],
+    )
     sdk_client = Mock()
     sdk_client.revoke.side_effect = CoreConnectSSOError("IdP unavailable")
     with patch("core_connect_sso.contrib.django.views.get_client", return_value=sdk_client):
@@ -377,7 +394,10 @@ def test_callback_uses_real_sdk_jwt_verification(client, identity, signing_key, 
     client.get(LOGIN)
     verifier = client.session[SESSION_VERIFIER_KEY]
     claims = dict(
-        identity.raw, aud=settings.CORE_CONNECT_SSO_CLIENT_ID, iat=int(time.time()), exp=int(time.time()) + 3600
+        identity.raw,
+        aud=settings.CORE_CONNECT_SSO_CLIENT_ID,
+        iat=int(time.time()),
+        exp=int(time.time()) + 3600,
     )
     signing = signing_key
     if failure == "signature":
@@ -396,7 +416,10 @@ def test_callback_uses_real_sdk_jwt_verification(client, identity, signing_key, 
     jwk = jwt.algorithms.RSAAlgorithm.to_jwk(signing_key.public_key(), as_dict=True)
     transport = Mock()
     transport.get_jwks.return_value = {"keys": [dict(jwk, kid="consumer-test-key", alg="RS256")]}
-    transport.fetch_token.return_value = {"access_token": token, "refresh_token": "refresh"}
+    transport.fetch_token.return_value = {
+        "access_token": token,
+        "refresh_token": "refresh",
+    }
     sdk_client = CoreConnectClient(
         issuer=identity.issuer,
         client_id=settings.CORE_CONNECT_SSO_CLIENT_ID,
@@ -406,7 +429,10 @@ def test_callback_uses_real_sdk_jwt_verification(client, identity, signing_key, 
         environment="development",
     )
     with patch("core_connect_sso.contrib.django.views.get_client", return_value=sdk_client):
-        response = client.get(CALLBACK, {"code": "authorization-code", "state": client.session[SESSION_STATE_KEY]})
+        response = client.get(
+            CALLBACK,
+            {"code": "authorization-code", "state": client.session[SESSION_STATE_KEY]},
+        )
     transport.fetch_token.assert_called_once_with(code="authorization-code", code_verifier=verifier)
     if failure:
         assert response.status_code == 400

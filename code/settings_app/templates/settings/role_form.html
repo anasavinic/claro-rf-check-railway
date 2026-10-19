@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if action == "Edit" %}Edit Role{% else %}Create Role{% endif %} — Claro RF Check{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen">
+	{% include "ep_import/partials/sidebar.html" %}
+	<div class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8">
+		{% include "components/flash_messages.html" %}
+		{% if action == "Edit" %}
+		{% include "components/settings_page_header.html" with breadcrumb="Home > Settings > Roles > Edit" title="Edit role" subtitle="Update this role's name and the permissions it grants." %}
+		{% else %}
+		{% include "components/settings_page_header.html" with breadcrumb="Home > Settings > Roles > Create" title="Create role" subtitle="Define a new role and the permissions it grants." %}
+		{% endif %}
+
+		<form method="post" id="role-form" class="flex flex-col gap-5 w-full max-w-5xl" data-perm-picker>
+			{% csrf_token %}
+
+			<div class="settings-card-pad flex flex-col gap-4">
+				<div class="flex flex-col gap-1">
+					<p class="font-semibold text-[14px] text-dark-blue">General information</p>
+					<p class="font-normal text-[12px] text-muted">A clear name helps admins assign the right access.</p>
+				</div>
+				<label class="flex flex-col gap-1.5 max-w-md">
+					<span class="text-[12px] font-medium text-secondary">Name</span>
+					{{ form.name }}
+					{% if form.name.errors %}<span class="text-[12px] text-danger">{{ form.name.errors|striptags }}</span>{% endif %}
+				</label>
+			</div>
+
+			<div class="settings-card-pad flex flex-col gap-4">
+				<div class="flex items-center justify-between gap-3">
+					<div class="flex flex-col gap-1">
+						<p class="font-semibold text-[14px] text-dark-blue">Permissions</p>
+						<p class="font-normal text-[12px] text-muted">Select what this role can do in each module.</p>
+					</div>
+					<span data-perm-count data-perm-count-format="{n} selected"
+					      class="role-chip shrink-0">0 selected</span>
+				</div>
+				{% include "components/permission_picker_toolbar.html" with extra_class="p-3 border border-thin-gray rounded-xl bg-background" %}
+				{% include "components/permission_modules.html" with input_name="permissions" grid_class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" %}
+			</div>
+
+			<div class="flex items-center justify-end gap-3 w-full">
+				<a href="{% url 'settings:roles-list' %}" class="settings-btn-secondary">Cancel</a>
+				<button type="submit" class="settings-btn-primary">
+					{% if action == "Edit" %}Save changes{% else %}Create role{% endif %}
+				</button>
+			</div>
+		</form>
+	</div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{% static 'js/components/permission_picker.js' %}"></script>
+{% endblock %}

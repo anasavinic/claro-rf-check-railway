@@ -32,16 +32,31 @@
 		<div class="flex items-start pb-1 pt-3 px-5 w-full">
 			<p class="flex-1 font-semibold text-[11px] uppercase text-muted">General</p>
 		</div>
+		<a href="{% url 'email_lists:index' %}"
+		   class="flex gap-2 h-9 items-center px-5 w-full {% if active_nav == 'email_lists' %}bg-light-blue border-l-2 border-primary{% else %}border-l-2 border-transparent{% endif %}">
+			<img src="{% static 'ep_import/icons/mail.svg' %}" alt="" class="size-4">
+			<span class="flex-1 text-[13px] {% if active_nav == 'email_lists' %}font-medium text-active-text{% else %}font-medium text-secondary{% endif %}">Listas de e-mail</span>
+		</a>
 		<a href="{% url 'combined:configure' %}"
 		   class="flex gap-2 h-9 items-center px-5 w-full {% if active_nav == 'combined' %}bg-light-blue{% endif %}">
 			<img src="{% static 'ep_import/icons/layers3.svg' %}" alt="" class="size-4">
 			<span class="flex-1 text-[13px] {% if active_nav == 'combined' %}text-active-text{% else %}text-secondary{% endif %}">Combined RF check</span>
 		</a>
-		<!-- # History stays hidden until that screen exists.
-		<a href="#" class="flex gap-2 h-9 items-center px-5 w-full">
+		<a href="{% url 'precheck:history' %}"
+		   class="flex gap-2 h-9 items-center px-5 w-full {% if active_nav == 'history' %}bg-light-blue border-l-2 border-primary{% else %}border-l-2 border-transparent{% endif %}">
 			<img src="{% static 'ep_import/icons/clock.svg' %}" alt="" class="size-4">
-			<span class="flex-1 text-[13px] text-secondary">History</span>
+			<span class="flex-1 text-[13px] {% if active_nav == 'history' %}font-medium text-active-text{% else %}font-medium text-secondary{% endif %}">History</span>
 		</a>
-		-->
+
+		{% if perms.users.manage_roles %}
+		<div class="flex items-start pb-1 pt-3 px-5 w-full">
+			<p class="flex-1 font-semibold text-[11px] uppercase text-muted">Admin</p>
+		</div>
+		<a href="{% url 'settings:page' %}"
+		   class="flex gap-2 h-9 items-center px-5 w-full {% if active_nav == 'settings' %}bg-light-blue border-l-2 border-primary{% else %}border-l-2 border-transparent{% endif %}">
+			<img src="{% static 'ep_import/icons/settings.svg' %}" alt="" class="size-4 {% if active_nav == 'settings' %}opacity-100{% else %}opacity-70{% endif %}">
+			<span class="flex-1 text-[13px] {% if active_nav == 'settings' %}font-medium text-active-text{% else %}font-medium text-secondary{% endif %}">Settings</span>
+		</a>
+		{% endif %}
 	</nav>
 </aside>

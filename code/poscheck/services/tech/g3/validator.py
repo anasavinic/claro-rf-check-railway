@@ -7,10 +7,14 @@ from dataclasses import dataclass
 from typing import Any, Final
 
 from ep_import.models import EpCell, ImportJobStatus
-from ep_import.services.scripts import FULL_CHECK_3G_PER_CELL_COMMANDS, FULL_CHECK_3G_SITE_COMMANDS
+from ep_import.services.scripts import (
+    FULL_CHECK_3G_PER_CELL_COMMANDS,
+    FULL_CHECK_3G_SITE_COMMANDS,
+)
 from poscheck.services.errors import (
     PoscheckError,
     PoscheckIssue,
+    cell_missing_note,
     ep_field_inconsistent,
     ep_field_missing,
     full_check_not_selected,
@@ -130,7 +134,7 @@ def compare_full_check_3g(expected: EpExpected3GValues, extraction: FullCheck3GE
                     "expected": expected_cell.cell_name,
                     "found": "",
                     "status": VALIDATION_STATUS_FAILED,
-                    "note": "Cell was not found in LST UCELL return.",
+                    "note": cell_missing_note(expected_cell.cell_name, "LST UCELL"),
                     "cell_name": expected_cell.cell_name,
                 }
             )
@@ -231,7 +235,10 @@ def _command_validations_3g(
 ) -> list[dict[str, Any]]:
     validations: list[dict[str, Any]] = []
     for command in FULL_CHECK_3G_SITE_COMMANDS:
-        match = next((item for item in extraction.commands if item.command == command and item.ok), None)
+        match = next(
+            (item for item in extraction.commands if item.command == command and item.ok),
+            None,
+        )
         if match is None:
             failed = next((item for item in extraction.commands if item.command == command), None)
             validations.append(
@@ -240,7 +247,7 @@ def _command_validations_3g(
                     "label": command,
                     "expected": "RETCODE=0",
                     "found": f"RETCODE={failed.retcode}" if failed else "missing",
-                    "status": VALIDATION_STATUS_FAILED if failed is None else VALIDATION_STATUS_INCONSISTENT,
+                    "status": (VALIDATION_STATUS_FAILED if failed is None else VALIDATION_STATUS_INCONSISTENT),
                     "note": (
                         f"Command '{command}' was not found in the return."
                         if failed is None
@@ -282,7 +289,7 @@ def _command_validations_3g(
                         "label": label,
                         "expected": "RETCODE=0",
                         "found": f"RETCODE={failed.retcode}" if failed else "missing",
-                        "status": VALIDATION_STATUS_FAILED if failed is None else VALIDATION_STATUS_INCONSISTENT,
+                        "status": (VALIDATION_STATUS_FAILED if failed is None else VALIDATION_STATUS_INCONSISTENT),
                         "note": (
                             f"Command '{command}' for CellId {cell.cell_id} was not found."
                             if failed is None

@@ -1,0 +1,87 @@
+{% load static %}
+<div id="saved-lists"
+     class="bg-white border border-thin-gray flex flex-col gap-4 p-6 rounded-xl w-full min-h-[280px]"
+     {% if oob %}hx-swap-oob="outerHTML"{% endif %}>
+	<p class="font-semibold text-[14px] text-dark-blue">
+		{% if lists %}Listas salvas ({{ lists|length }}){% else %}Listas salvas{% endif %}
+	</p>
+
+	{% if lists %}
+	<div class="flex flex-col w-full">
+		{% for item in lists %}
+		<a href="{% url 'email_lists:index' %}?list={{ item.pk }}"
+		   hx-get="{% url 'email_lists:panel' %}?list={{ item.pk }}"
+		   hx-target="#saved-lists"
+		   hx-swap="outerHTML show:none"
+		   hx-push-url="{% url 'email_lists:index' %}?list={{ item.pk }}"
+		   class="flex items-center justify-between gap-4 px-4 py-3 rounded-lg text-[13px] {% if selected.pk == item.pk %}bg-light-blue text-active-text{% else %}text-dark-blue hover:bg-light-blue/50{% endif %}">
+			<span class="truncate">{{ item.name }}</span>
+			<span class="text-[12px] text-muted shrink-0">{{ item.address_count }} endereço(s)</span>
+		</a>
+		{% endfor %}
+	</div>
+	{% endif %}
+
+	{% if selected %}
+	<div class="flex items-start justify-between gap-4 w-full pt-3">
+		<div class="min-w-0">
+			<p class="font-semibold text-[14px] text-dark-blue truncate">{{ selected.name }}</p>
+			<p class="font-normal text-[12px] text-muted mt-1">{{ addresses|length }} endereço(s)</p>
+		</div>
+		<div class="flex gap-2 shrink-0">
+			<a href="{% url 'email_lists:export' selected.pk %}"
+			   class="bg-white border border-thin-gray px-4 py-2 rounded-lg text-[13px] font-semibold text-secondary">
+				Exportar CSV
+			</a>
+			<form method="post"
+			      action="{% url 'email_lists:delete' selected.pk %}"
+			      hx-post="{% url 'email_lists:delete' selected.pk %}"
+			      hx-target="#email-list-feedback"
+			      hx-swap="innerHTML show:none">
+				{% csrf_token %}
+				<button type="submit" class="bg-white border border-thin-gray px-4 py-2 rounded-lg text-[13px] font-semibold text-danger">
+					Excluir lista
+				</button>
+			</form>
+		</div>
+	</div>
+	<div class="w-full overflow-y-auto max-h-[420px]">
+		<table class="w-full text-left">
+			<thead>
+				<tr class="text-[11px] font-semibold uppercase text-muted border-b border-thin-gray">
+					<th class="sticky top-0 bg-white px-4 py-3 font-semibold">E-mail</th>
+					<th class="sticky top-0 bg-white px-4 py-3 w-24 font-semibold"></th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for address in addresses %}
+				<tr class="border-b border-thin-gray">
+					<td class="px-4 py-3 text-[13px] text-dark-blue">{{ address.address }}</td>
+					<td class="px-4 py-3 text-right">
+						<form method="post"
+						      action="{% url 'email_lists:remove' selected.pk address.pk %}"
+						      hx-post="{% url 'email_lists:remove' selected.pk address.pk %}"
+						      hx-target="#email-list-feedback"
+						      hx-swap="innerHTML show:none">
+							{% csrf_token %}
+							<button type="submit" class="text-[12px] font-semibold text-danger">Remover</button>
+						</form>
+					</td>
+				</tr>
+				{% empty %}
+				<tr>
+					<td colspan="2" class="px-4 py-8 text-center text-[13px] text-secondary">Nenhum endereço nesta lista.</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+	{% elif not lists %}
+	<div class="flex flex-1 flex-col gap-3 items-center justify-center w-full px-4 py-8">
+		<img src="{% static 'ep_import/icons/mail.svg' %}" alt="" class="size-10">
+		<p class="font-normal text-[13px] text-secondary text-center">Nenhuma lista cadastrada.</p>
+	</div>
+	{% else %}
+	<p class="font-normal text-[13px] text-secondary px-4 py-3">Selecione uma lista para ver os endereços.</p>
+	{% endif %}
+</div>

@@ -1,0 +1,10 @@
+{# Expects: breadcrumb, title, subtitle (optional) #}
+<div class="flex flex-col gap-1 items-start flex-1 min-w-0">
+	{% if breadcrumb %}
+	<p class="font-normal text-[11px] uppercase text-muted w-full">{{ breadcrumb }}</p>
+	{% endif %}
+	<p class="font-semibold text-[20px] text-dark-blue w-full">{{ title }}</p>
+	{% if subtitle %}
+	<p class="font-normal text-[13px] text-secondary w-full">{{ subtitle }}</p>
+	{% endif %}
+</div>

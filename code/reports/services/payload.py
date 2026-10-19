@@ -267,11 +267,19 @@ def _flags_check_label(pre_check: bool, full_check: bool) -> str:
     return "—"
 
 
+def combined_export_available(combined: CombinedCheck) -> bool:
+    """True when at least one child analysis is in an exportable status."""
+    return any(analysis.status in EXPORTABLE_STATUSES for analysis in combined.analyses.all())
+
+
 def build_combined_export_payload(combined: CombinedCheck) -> ExportPayload:
     """Assemble one payload from every exportable child analysis."""
     analyses = list(
         combined.analyses.select_related("ep_job").prefetch_related("return_files").order_by("technology", "site_name")
     )
+    if analyses and not combined_export_available(combined):
+        raise ExportError("Cannot export", [analysis_not_exportable()])
+
     sections: list[CheckSection] = []
     sites: list[str] = []
     techs: list[str] = []

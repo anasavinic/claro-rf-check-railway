@@ -4,7 +4,11 @@ from django.http import HttpResponse
 from django.test import RequestFactory, override_settings
 
 from claro_rf_check.middleware import SecurityHeadersMiddleware
-from claro_rf_check.settings.hardening import require_csrf_origins, require_explicit_hosts, require_object_storage
+from claro_rf_check.settings.hardening import (
+    require_csrf_origins,
+    require_explicit_hosts,
+    require_object_storage,
+)
 
 
 def test_production_rejects_empty_or_wildcard_hosts():

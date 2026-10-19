@@ -1,4 +1,12 @@
 document.addEventListener("alpine:init", () => {
+    function openDesktopDownload(url) {
+        // WebView2 drops a blob link created after fetch(). A real navigation
+        // keeps the click and lets the window show its Save dialog.
+        if (!url || !window.pywebview) return false;
+        window.location.assign(url);
+        return true;
+    }
+
     async function parseJsonResponse(response) {
         const text = await response.text();
         try {
@@ -92,6 +100,57 @@ document.addEventListener("alpine:init", () => {
         return { response, data, ok: response.ok };
     }
 
+    function filenameFromDisposition(header, fallback) {
+        if (!header) return fallback;
+        const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
+        if (encoded) {
+            try {
+                return decodeURIComponent(encoded[1]);
+            } catch (error) {
+                return fallback;
+            }
+        }
+        const quoted = /filename="([^"]+)"/i.exec(header);
+        if (quoted) return quoted[1];
+        const plain = /filename=([^;]+)/i.exec(header);
+        return plain ? plain[1].trim() : fallback;
+    }
+
+    function notifyUser(type, title, message) {
+        window.dispatchEvent(
+            new CustomEvent("notify", {
+                detail: { type, title, message },
+            })
+        );
+    }
+
+    async function downloadAttachment(url, fallbackName) {
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            const error = new Error(data.message || "Could not generate the file. Try again.");
+            error.title = data.title || "";
+            throw error;
+        }
+        const blob = await response.blob();
+        const filename = filenameFromDisposition(response.headers.get("Content-Disposition"), fallbackName);
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+        return filename;
+    }
+
     Alpine.data("toast", () => ({
         visible: false,
         type: "info",
@@ -113,6 +172,21 @@ document.addEventListener("alpine:init", () => {
             this.visible = true;
             clearTimeout(this.timer);
             this.timer = setTimeout(() => (this.visible = false), 5000);
+        },
+    }));
+
+    Alpine.data("extraPermModal", () => ({
+        open: false,
+        openModal() {
+            this.open = true;
+        },
+        closeModal() {
+            this.open = false;
+        },
+        onKeydown(event) {
+            if (event.key === "Escape") {
+                this.closeModal();
+            }
         },
     }));
 
@@ -413,6 +487,8 @@ document.addEventListener("alpine:init", () => {
         fullCheckFilename: "",
         uploading: false,
         processing: false,
+        downloadBusy: false,
+        downloadTarget: "",
 
         init() {
             const el = this.$el;
@@ -496,6 +572,33 @@ document.addEventListener("alpine:init", () => {
 
         copyFullCheck() {
             this.copyScript(this.$refs.fullCheckScript?.textContent || "");
+        },
+
+        scriptBusy(key) {
+            return this.downloadBusy && this.downloadTarget === key;
+        },
+
+        scriptButtonLabel(key) {
+            return this.scriptBusy(key) ? "Downloading…" : "Download script";
+        },
+
+        async downloadScript(key, url, fallbackName, successTitle) {
+            if (!url || this.downloadBusy) return;
+            this.downloadBusy = true;
+            this.downloadTarget = key;
+            try {
+                const filename = await downloadAttachment(url, fallbackName);
+                notifyUser("success", successTitle, `${filename} downloaded.`);
+            } catch (error) {
+                notifyUser(
+                    "error",
+                    error.title || "Download failed",
+                    error.message || "Could not download the script. Try again."
+                );
+            } finally {
+                this.downloadBusy = false;
+                this.downloadTarget = "";
+            }
         },
 
         pickPrecheckFile() {
@@ -901,6 +1004,7 @@ document.addEventListener("alpine:init", () => {
         exportUrl: "",
         emailUrl: "",
         downloadBusy: false,
+        downloadTarget: "",
 
         init() {
             const el = this.$el;
@@ -1034,84 +1138,75 @@ document.addEventListener("alpine:init", () => {
             this.query = event?.target?.value || "";
         },
 
+        get exportBusy() {
+            return this.downloadBusy && this.downloadTarget === "export";
+        },
+
+        get emailBusy() {
+            return this.downloadBusy && this.downloadTarget === "email";
+        },
+
+        get exportTitle() {
+            return this.exportBusy ? "Exporting…" : "Export Report";
+        },
+
+        get exportHint() {
+            return this.exportBusy
+                ? "Preparing the report download."
+                : "Download the generated analysis files.";
+        },
+
+        get emailTitle() {
+            return this.emailBusy ? "Preparing email…" : "Prepare Email";
+        },
+
+        get emailHint() {
+            return this.emailBusy
+                ? "Preparing the email file."
+                : "Generate an editable email template based on the results of this analysis.";
+        },
+
         exportReport() {
-            this.downloadOutput(this.exportUrl, "Claro_RF_Check_Report.xlsx", "Export failed");
+            if (openDesktopDownload(this.exportUrl)) return;
+            this.runDownload(
+                this.exportUrl,
+                "Claro_RF_Check_Report.xlsx",
+                "Export failed",
+                "Report exported",
+                "export"
+            );
         },
 
         prepareEmail(format) {
             const kind = format === "msg" ? "msg" : "eml";
             const joiner = this.emailUrl.includes("?") ? "&" : "?";
-            this.downloadOutput(
-                `${this.emailUrl}${joiner}format=${kind}`,
+            const url = `${this.emailUrl}${joiner}format=${kind}`;
+            if (openDesktopDownload(url)) return;
+            this.runDownload(
+                url,
                 `Claro_RF_Check_Report.${kind}`,
-                "Share failed"
+                "Share failed",
+                "Email ready",
+                "email"
             );
         },
 
-        filenameFromDisposition(header, fallback) {
-            if (!header) return fallback;
-            const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
-            if (encoded) {
-                try {
-                    return decodeURIComponent(encoded[1]);
-                } catch (error) {
-                    return fallback;
-                }
-            }
-            const quoted = /filename="([^"]+)"/i.exec(header);
-            if (quoted) return quoted[1];
-            const plain = /filename=([^;]+)/i.exec(header);
-            return plain ? plain[1].trim() : fallback;
-        },
-
-        notifyOutputError(title, message) {
-            window.dispatchEvent(
-                new CustomEvent("notify", {
-                    detail: {
-                        type: "error",
-                        title,
-                        message,
-                    },
-                })
-            );
-        },
-
-        async downloadOutput(url, fallbackName, errorTitle) {
+        async runDownload(url, fallbackName, errorTitle, successTitle, target) {
             if (!url || this.downloadBusy) return;
             this.downloadBusy = true;
+            this.downloadTarget = target;
             try {
-                const response = await fetch(url, {
-                    method: "GET",
-                    headers: {
-                        Accept: "application/json",
-                        "X-Requested-With": "XMLHttpRequest",
-                    },
-                });
-                if (!response.ok) {
-                    const data = await response.json().catch(() => ({}));
-                    this.notifyOutputError(
-                        data.title || errorTitle,
-                        data.message || "Could not generate the report. Try again."
-                    );
-                    return;
-                }
-                const blob = await response.blob();
-                const filename = this.filenameFromDisposition(
-                    response.headers.get("Content-Disposition"),
-                    fallbackName
-                );
-                const objectUrl = URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = objectUrl;
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                URL.revokeObjectURL(objectUrl);
+                const filename = await downloadAttachment(url, fallbackName);
+                notifyUser("success", successTitle, `${filename} downloaded.`);
             } catch (error) {
-                this.notifyOutputError(errorTitle, "Could not generate the report. Try again.");
+                notifyUser(
+                    "error",
+                    error.title || errorTitle,
+                    error.message || "Could not generate the file. Try again."
+                );
             } finally {
                 this.downloadBusy = false;
+                this.downloadTarget = "";
             }
         },
     }));
@@ -1539,6 +1634,8 @@ document.addEventListener("alpine:init", () => {
         allScriptsOpen: false,
         uploading: false,
         processing: false,
+        downloadBusy: false,
+        downloadTarget: "",
 
         init() {
             const el = this.$el;
@@ -1619,6 +1716,29 @@ document.addEventListener("alpine:init", () => {
             const file = event.target?.files?.[0];
             if (file) this.uploadFile(file, kind, technology);
             if (event.target) event.target.value = "";
+        },
+
+        scriptBusy(key) {
+            return this.downloadBusy && this.downloadTarget === key;
+        },
+
+        async downloadScript(key, url, fallbackName, successTitle) {
+            if (!url || this.downloadBusy) return;
+            this.downloadBusy = true;
+            this.downloadTarget = key;
+            try {
+                const filename = await downloadAttachment(url, fallbackName);
+                notifyUser("success", successTitle, `${filename} downloaded.`);
+            } catch (error) {
+                notifyUser(
+                    "error",
+                    error.title || "Download failed",
+                    error.message || "Could not download the script. Try again."
+                );
+            } finally {
+                this.downloadBusy = false;
+                this.downloadTarget = "";
+            }
         },
 
         async copyText(text) {
@@ -1756,24 +1876,31 @@ document.addEventListener("alpine:init", () => {
     Alpine.data("combinedResult", () => ({
         tab: "overview",
         techFilter: "all",
+        siteFilter: "all",
+        categoryFilter: "all",
         filter: "all",
         search: "",
-        exportUrl: "",
-        emailUrl: "",
-        downloadBusy: false,
         page: 1,
         pageSize: 25,
         technologies: [],
+        sites: [],
+        categories: [],
         preRows: [],
         fullRows: [],
         totalCount: 0,
         consistentCount: 0,
         inconsistentCount: 0,
         failedCount: 0,
+        exportUrl: "",
+        emailUrl: "",
+        downloadBusy: false,
+        downloadTarget: "",
 
         init() {
             const el = this.$el;
             this.technologies = (el.dataset.techs || "").split(",").filter(Boolean);
+            this.sites = (el.dataset.sites || "").split(",").filter(Boolean);
+            this.categories = (el.dataset.categories || "").split(",").filter(Boolean);
             this.exportUrl = el.dataset.exportUrl || "";
             this.emailUrl = el.dataset.emailUrl || "";
             this.totalCount = Number(el.dataset.total || 0);
@@ -1819,6 +1946,18 @@ document.addEventListener("alpine:init", () => {
         },
         setTechFilter(tech) {
             this.techFilter = tech;
+            this.resetRowsPage();
+        },
+        setSiteAll() {
+            this.siteFilter = "all";
+            this.resetRowsPage();
+        },
+        setSiteFilter(site) {
+            this.siteFilter = site;
+            this.resetRowsPage();
+        },
+        onCategoryChange(event) {
+            this.categoryFilter = event?.target?.value || "all";
             this.resetRowsPage();
         },
         setFilterAll() {
@@ -1867,6 +2006,16 @@ document.addEventListener("alpine:init", () => {
                 ? "bg-primary text-white border-primary"
                 : "bg-white text-secondary border-thin-gray";
         },
+        get siteAllClass() {
+            return this.siteFilter === "all"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-secondary border-thin-gray";
+        },
+        siteButtonClass(site) {
+            return this.siteFilter === site
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-secondary border-thin-gray";
+        },
         get filterAllClass() {
             return this.filter === "all" ? "is-active" : "";
         },
@@ -1886,33 +2035,18 @@ document.addEventListener("alpine:init", () => {
             return [...this.preRows, ...this.fullRows];
         },
 
-        rowMatchesTech(row) {
-            return this.techFilter === "all" || row.technology === this.techFilter;
-        },
-
-        get countedRows() {
-            return this.activeRows.filter((row) => this.rowMatchesTech(row));
-        },
-
-        get scopedTotal() {
-            return this.countedRows.length;
-        },
-
-        get scopedConsistent() {
-            return this.countedRows.filter((row) => row.status === "consistent").length;
-        },
-
-        get scopedFailed() {
-            return this.countedRows.filter((row) => row.status === "failed").length;
-        },
-
-        get scopedInconsistent() {
-            return this.countedRows.filter((row) => row.status === "inconsistent").length;
+        get scopedRows() {
+            return this.activeRows.filter((row) => {
+                if (this.techFilter !== "all" && row.technology !== this.techFilter) return false;
+                if (this.siteFilter !== "all" && row.site_name !== this.siteFilter) return false;
+                if (this.categoryFilter !== "all" && (row.code || "") !== this.categoryFilter) return false;
+                return true;
+            });
         },
 
         get visibleRows() {
             const q = (this.search || "").toLowerCase();
-            return this.countedRows.filter((row) => {
+            return this.scopedRows.filter((row) => {
                 const status = row.status || "";
                 if (this.filter === "ok" && status !== "consistent") return false;
                 if (this.filter === "nok" && status !== "inconsistent") return false;
@@ -1927,12 +2061,26 @@ document.addEventListener("alpine:init", () => {
                     row.expected,
                     row.found,
                     row.actual,
+                    row.note,
                 ]
                     .filter(Boolean)
                     .join(" ")
                     .toLowerCase();
                 return hay.includes(q);
             });
+        },
+
+        get displayTotalCount() {
+            return this.scopedRows.length;
+        },
+        get displayConsistentCount() {
+            return this.scopedRows.filter((r) => r.status === "consistent").length;
+        },
+        get displayFailedCount() {
+            return this.scopedRows.filter((r) => r.status === "failed").length;
+        },
+        get displayInconsistentCount() {
+            return this.scopedRows.filter((r) => r.status === "inconsistent").length;
         },
 
         get totalRowsPages() {
@@ -1989,97 +2137,16 @@ document.addEventListener("alpine:init", () => {
         },
 
         get filterAllLabel() {
-            return `All (${this.scopedTotal})`;
+            return `All (${this.scopedRows.length})`;
         },
         get filterOkLabel() {
-            return `Ready (${this.scopedConsistent})`;
+            return `Ready (${this.scopedRows.filter((r) => r.status === "consistent").length})`;
         },
         get filterFailedLabel() {
-            return `Attention (${this.scopedFailed})`;
+            return `Attention (${this.scopedRows.filter((r) => r.status === "failed").length})`;
         },
         get filterNokLabel() {
-            return `Issues (${this.scopedInconsistent})`;
-        },
-
-        exportReport() {
-            this.downloadOutput(this.exportUrl, "Claro_RF_Check_Report.xlsx", "Export failed");
-        },
-
-        prepareEmail(format) {
-            const kind = format === "msg" ? "msg" : "eml";
-            const joiner = this.emailUrl.includes("?") ? "&" : "?";
-            this.downloadOutput(
-                `${this.emailUrl}${joiner}format=${kind}`,
-                `Claro_RF_Check_Report.${kind}`,
-                "Share failed"
-            );
-        },
-
-        filenameFromDisposition(header, fallback) {
-            if (!header) return fallback;
-            const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
-            if (encoded) {
-                try {
-                    return decodeURIComponent(encoded[1]);
-                } catch (error) {
-                    return fallback;
-                }
-            }
-            const quoted = /filename="([^"]+)"/i.exec(header);
-            if (quoted) return quoted[1];
-            const plain = /filename=([^;]+)/i.exec(header);
-            return plain ? plain[1].trim() : fallback;
-        },
-
-        notifyOutputError(title, message) {
-            window.dispatchEvent(
-                new CustomEvent("notify", {
-                    detail: {
-                        type: "error",
-                        title,
-                        message,
-                    },
-                })
-            );
-        },
-
-        async downloadOutput(url, fallbackName, errorTitle) {
-            if (!url || this.downloadBusy) return;
-            this.downloadBusy = true;
-            try {
-                const response = await fetch(url, {
-                    method: "GET",
-                    headers: {
-                        Accept: "application/json",
-                        "X-Requested-With": "XMLHttpRequest",
-                    },
-                });
-                if (!response.ok) {
-                    const data = await response.json().catch(() => ({}));
-                    this.notifyOutputError(
-                        data.title || errorTitle,
-                        data.message || "Could not generate the report. Try again."
-                    );
-                    return;
-                }
-                const blob = await response.blob();
-                const filename = this.filenameFromDisposition(
-                    response.headers.get("Content-Disposition"),
-                    fallbackName
-                );
-                const objectUrl = URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = objectUrl;
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                URL.revokeObjectURL(objectUrl);
-            } catch (error) {
-                this.notifyOutputError(errorTitle, "Could not generate the report. Try again.");
-            } finally {
-                this.downloadBusy = false;
-            }
+            return `Issues (${this.scopedRows.filter((r) => r.status === "inconsistent").length})`;
         },
 
         statusLabel(status) {
@@ -2092,6 +2159,106 @@ document.addEventListener("alpine:init", () => {
             if (status === "consistent") return "bg-success-bg text-success-text border border-[#bbf7d0]";
             if (status === "inconsistent") return "bg-[#fee2e2] text-[#991b1b] border border-[#fecaca]";
             return "bg-[#fef3c7] text-[#92400e] border border-[#fde68a]";
+        },
+
+        get exportBusy() {
+            return this.downloadBusy && this.downloadTarget === "export";
+        },
+
+        get emailBusy() {
+            return this.downloadBusy && this.downloadTarget === "email";
+        },
+
+        get exportTitle() {
+            return this.exportBusy ? "Exporting…" : "Export Report";
+        },
+
+        get exportHint() {
+            return this.exportBusy
+                ? "Preparing the report download."
+                : "Download the generated analysis files.";
+        },
+
+        get emailTitle() {
+            return this.emailBusy ? "Preparing email…" : "Prepare Email";
+        },
+
+        get emailHint() {
+            return this.emailBusy
+                ? "Preparing the email file."
+                : "Generate an editable email template based on the results of this analysis.";
+        },
+
+        exportReport() {
+            if (openDesktopDownload(this.exportUrl)) return;
+            this.runDownload(
+                this.exportUrl,
+                "Claro_RF_Check_Report.xlsx",
+                "Export failed",
+                "Report exported",
+                "export"
+            );
+        },
+
+        prepareEmail(format) {
+            const kind = format === "msg" ? "msg" : "eml";
+            const joiner = this.emailUrl.includes("?") ? "&" : "?";
+            const url = `${this.emailUrl}${joiner}format=${kind}`;
+            if (openDesktopDownload(url)) return;
+            this.runDownload(
+                url,
+                `Claro_RF_Check_Report.${kind}`,
+                "Share failed",
+                "Email ready",
+                "email"
+            );
+        },
+
+        async runDownload(url, fallbackName, errorTitle, successTitle, target) {
+            if (!url || this.downloadBusy) return;
+            this.downloadBusy = true;
+            this.downloadTarget = target;
+            try {
+                const filename = await downloadAttachment(url, fallbackName);
+                notifyUser("success", successTitle, `${filename} downloaded.`);
+            } catch (error) {
+                notifyUser(
+                    "error",
+                    error.title || errorTitle,
+                    error.message || "Could not generate the file. Try again."
+                );
+            } finally {
+                this.downloadBusy = false;
+                this.downloadTarget = "";
+            }
+        },
+
+    }));
+
+    Alpine.data("emailListForm", () => ({
+        showNewList: true,
+        showExistingList: false,
+        newListClass: "border-primary bg-light-blue",
+        existingListClass: "border-thin-gray bg-white",
+        fileLabel: "Nenhum arquivo selecionado",
+
+        selectNew() {
+            this.showNewList = true;
+            this.showExistingList = false;
+            this.newListClass = "border-primary bg-light-blue";
+            this.existingListClass = "border-thin-gray bg-white";
+        },
+
+        selectExisting() {
+            this.showNewList = false;
+            this.showExistingList = true;
+            this.newListClass = "border-thin-gray bg-white";
+            this.existingListClass = "border-primary bg-light-blue";
+        },
+
+        onFileChosen(event) {
+            const file = event.target.files && event.target.files[0];
+            this.fileLabel = file ? file.name : "Nenhum arquivo selecionado";
         },
     }));
 });

@@ -19,7 +19,15 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="CombinedCheck",
             fields=[
-                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
                 ("technologies", models.JSONField(blank=True, default=list)),
                 ("site_names", models.JSONField(blank=True, default=list)),
                 ("pre_check", models.BooleanField(default=False)),
@@ -40,7 +48,10 @@ class Migration(migrations.Migration):
                         max_length=32,
                     ),
                 ),
-                ("created_at", models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
+                (
+                    "created_at",
+                    models.DateTimeField(db_index=True, default=django.utils.timezone.now),
+                ),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 (
                     "created_by",
@@ -80,6 +91,9 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="checkanalysis",
-            index=models.Index(fields=["combined_check", "technology"], name="precheck_ch_combine_a3f6af_idx"),
+            index=models.Index(
+                fields=["combined_check", "technology"],
+                name="precheck_ch_combine_a3f6af_idx",
+            ),
         ),
     ]

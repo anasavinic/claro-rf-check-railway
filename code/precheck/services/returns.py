@@ -10,7 +10,13 @@ from django.db import transaction
 from django.utils import timezone
 
 from ep_import.services.content import sha256_file
-from precheck.models import CheckAnalysis, CheckAnalysisStatus, CheckReturnFile, CheckType, PrecheckResult
+from precheck.models import (
+    CheckAnalysis,
+    CheckAnalysisStatus,
+    CheckReturnFile,
+    CheckType,
+    PrecheckResult,
+)
 from precheck.services.errors import PrecheckError, PrecheckIssue, analysis_busy
 
 MAX_RETURN_UPLOAD_BYTES: Final[int] = 10 * 1024 * 1024

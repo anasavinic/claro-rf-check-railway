@@ -4,7 +4,12 @@ from django.utils import timezone
 
 from ep_import.models import ImportJob, ImportJobStatus
 from poscheck.models import PoscheckResult
-from precheck.models import CheckAnalysis, CheckAnalysisStatus, PrecheckResult, PrecheckResultStatus
+from precheck.models import (
+    CheckAnalysis,
+    CheckAnalysisStatus,
+    PrecheckResult,
+    PrecheckResultStatus,
+)
 
 
 @pytest.fixture
@@ -75,7 +80,11 @@ def make_precheck_result(analysis, **kwargs):
         "analysis": analysis,
         "overall_status": PrecheckResultStatus.INCONSISTENT,
         "validations": precheck_validations(),
-        "extracted": {"gnodeb_id": "1060541", "tracking_area_code": "4151040", "ne_name": "S01PRCLG21"},
+        "extracted": {
+            "gnodeb_id": "1060541",
+            "tracking_area_code": "4151040",
+            "ne_name": "S01PRCLG21",
+        },
         "processed_at": timezone.now(),
     }
     defaults.update(kwargs)

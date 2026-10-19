@@ -1,0 +1,57 @@
+<div class="settings-table-wrap">
+	<table class="w-full text-left">
+		<thead>
+			<tr>
+				<th class="settings-th">Name</th>
+				<th class="settings-th">Permissions</th>
+				<th class="settings-th">Users</th>
+				<th class="settings-th w-44">Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for role in roles %}
+			<tr class="settings-tr">
+				<td class="settings-td">
+					<a href="{% url 'settings:roles-detail' role.pk %}" class="font-medium text-dark-blue hover:text-primary transition-colors">{{ role.name }}</a>
+				</td>
+				<td class="settings-td">
+					<span class="role-chip">{{ role.permissions_count }} perm{% if role.permissions_count != 1 %}s{% endif %}</span>
+				</td>
+				<td class="settings-td">{{ role.users_count }}</td>
+				<td class="settings-td">
+					<div class="flex items-center gap-3">
+						<a href="{% url 'settings:roles-detail' role.pk %}" class="text-[12px] font-medium text-primary hover:underline">View</a>
+						{% if can_update_roles %}
+						<a href="{% url 'settings:roles-update' role.pk %}" class="text-[12px] font-medium text-primary hover:underline">Edit</a>
+						{% endif %}
+						{% if can_delete_roles %}
+						<a href="{% url 'settings:roles-delete' role.pk %}" class="text-[12px] font-medium text-danger hover:underline">Delete</a>
+						{% endif %}
+					</div>
+				</td>
+			</tr>
+			{% empty %}
+			<tr>
+				<td colspan="4" class="px-4 py-12 text-center">
+					<p class="font-medium text-[14px] text-dark-blue mb-1">No roles found</p>
+					<p class="text-[13px] text-muted">Run <code class="text-dark-blue bg-readonly-gray px-1.5 py-0.5 rounded">manage.py seed</code> to create Admin, Manager, and Operator.</p>
+				</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<nav class="flex items-center justify-between mt-4 text-[13px]">
+	<span class="text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+	<div class="flex items-center gap-3">
+		{% if page_obj.has_previous %}
+		<a href="?q={{ search_q }}&page={{ page_obj.previous_page_number }}" class="settings-btn-secondary !px-3 !py-1.5 !text-[12px]">Previous</a>
+		{% endif %}
+		{% if page_obj.has_next %}
+		<a href="?q={{ search_q }}&page={{ page_obj.next_page_number }}" class="settings-btn-secondary !px-3 !py-1.5 !text-[12px]">Next</a>
+		{% endif %}
+	</div>
+</nav>
+{% endif %}

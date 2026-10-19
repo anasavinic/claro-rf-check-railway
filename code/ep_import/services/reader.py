@@ -22,7 +22,9 @@ def read_sheet_headers(source: str | Path | BinaryIO) -> dict[str, list[str]]:
         return _headers_from_workbook(wb)
 
 
-def read_canonical_sheets(source: str | Path | BinaryIO) -> dict[str, list[dict[str, Any]]]:
+def read_canonical_sheets(
+    source: str | Path | BinaryIO,
+) -> dict[str, list[dict[str, Any]]]:
     """Materialize required sheets. Used by tests; the job path streams instead."""
     data: dict[str, list[dict[str, Any]]] = {}
     with _open_workbook(source) as wb:

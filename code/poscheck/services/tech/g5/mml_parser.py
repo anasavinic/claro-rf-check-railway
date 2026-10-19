@@ -9,6 +9,7 @@ from poscheck.services.errors import (
     PoscheckParseError,
     empty_return,
     explain_missing_commands,
+    explain_precheck_uploaded_as_full_check,
     missing_command,
     missing_field,
     unrecognized_format,
@@ -131,10 +132,11 @@ def parse_full_check_5g_return(text: str) -> FullCheck5GExtraction:
     if dsp_nrducell is None:
         issues.append(missing_command(COMMAND_DSP_NRDUCELL))
     if issues:
-        raise PoscheckParseError(
-            "Execution failure",
-            explain_missing_commands("5G", by_command, issues),
-        )
+        explained = explain_precheck_uploaded_as_full_check("5G", by_command, issues)
+        if not explained or explained[0].code != "WRONG_CHECK_TYPE":
+            explained = explain_missing_commands("5G", by_command, issues)
+        title = "Wrong return file" if explained and explained[0].code == "WRONG_CHECK_TYPE" else "Execution failure"
+        raise PoscheckParseError(title, explained)
 
     assert gnodeb is not None and tracking is not None
     assert nrcell is not None and nrducell is not None and dsp_nrducell is not None

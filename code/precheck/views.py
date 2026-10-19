@@ -12,7 +12,10 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_GET, require_POST
+from results.adapters import poscheck_source_snapshot, precheck_source_snapshot
+from results.builders import build_from_analysis
 
+from claro_rf_check.celery_dispatch import BROKER_UNAVAILABLE_CODE
 from ep_import.models import EpCell
 from ep_import.services.scripts import (
     ep_cell_id_from_raw,
@@ -34,15 +37,15 @@ from precheck.models import (
 )
 from precheck.services.analysis import SESSION_ANALYSIS_KEY
 from precheck.services.authorization import can_mutate_analysis, mutable_analysis, visible_analysis
-from precheck.services.errors import PrecheckError
+from precheck.services.errors import PrecheckError, format_issue_messages
 from precheck.services.execution import (
     build_process_response,
+    dispatch_check_execution,
     enqueue_check_execution,
     execution_status_payload,
 )
 from precheck.services.returns import MAX_RETURN_UPLOAD_BYTES, has_precheck_return, store_precheck_return
 from precheck.services.validator import get_precheck_snapshot
-from precheck.tasks import process_check_execution
 
 logger = logging.getLogger("precheck.views")
 
@@ -180,14 +183,17 @@ def _analysis_context(analysis: CheckAnalysis, *, can_mutate: bool = True) -> di
         "can_reanalyze": bool(can_mutate and _supports_returns(analysis) and terminal),
         "max_return_mb": MAX_RETURN_UPLOAD_BYTES // (1024 * 1024),
         "upload_precheck_url": (
-            reverse("precheck:upload_precheck_return", kwargs={"technology": analysis.technology})
+            reverse(
+                "precheck:upload_precheck_return",
+                kwargs={"technology": analysis.technology},
+            )
             if can_mutate and analysis.pre_check
             else ""
         ),
         "upload_full_check_url": (
             reverse("poscheck:upload_full_check_return") if can_mutate and analysis.full_check else ""
         ),
-        "process_url": reverse("precheck:process", kwargs={"technology": analysis.technology}) if can_mutate else "",
+        "process_url": (reverse("precheck:process", kwargs={"technology": analysis.technology}) if can_mutate else ""),
         "import_returns_url": reverse("precheck:import_returns", kwargs={"technology": analysis.technology}),
         "config_url": (
             reverse("ep_import:site_cells", kwargs={"technology": analysis.technology}) + f"?job={analysis.ep_job_id}"
@@ -204,7 +210,11 @@ def import_returns(request: HttpRequest, technology: str = "5G") -> HttpResponse
     if not analysis or not _supports_returns(analysis):
         return redirect(reverse("ep_import:site_cells", kwargs={"technology": technology or "5G"}))
     can_mutate = can_mutate_analysis(request.user, analysis)
-    return render(request, "precheck/import_returns.html", _analysis_context(analysis, can_mutate=can_mutate))
+    return render(
+        request,
+        "precheck/import_returns.html",
+        _analysis_context(analysis, can_mutate=can_mutate),
+    )
 
 
 @precheck_login_required
@@ -233,7 +243,7 @@ def upload_precheck_return(request: HttpRequest, technology: str = "5G") -> Http
         stored = store_precheck_return(analysis, form.cleaned_data["file"])
     except PrecheckError as exc:
         status = 409 if exc.code == "ANALYSIS_BUSY" else 400
-        return _json_error(exc.title, exc.issues[0].message if exc.issues else str(exc), status=status)
+        return _json_error(exc.title, format_issue_messages(exc), status=status)
     except Exception:
         logger.exception("Pre-check return upload failed")
         return _json_error("Upload error", "Could not upload the return file. Try again.", status=500)
@@ -277,13 +287,22 @@ def process(request: HttpRequest, technology: str = "5G") -> HttpResponse:
     try:
         execution, created = enqueue_check_execution(analysis, user=request.user)
         if created or (execution.status == CheckExecutionStatus.PENDING and not execution.task_id):
-            process_check_execution.delay(str(execution.id))
+            dispatch_check_execution(execution)
         execution.refresh_from_db()
     except PrecheckError as exc:
-        status_code = 409 if exc.code == "ANALYSIS_BUSY" else 400
-        return _json_error(exc.title, exc.issues[0].message if exc.issues else str(exc), status=status_code)
+        if exc.code == "ANALYSIS_BUSY":
+            status_code = 409
+        elif exc.code == BROKER_UNAVAILABLE_CODE:
+            status_code = 503
+        else:
+            status_code = 400
+        return _json_error(exc.title, format_issue_messages(exc), status=status_code)
     except PermissionDenied:
-        return _json_error("Could not process", "You do not have permission to modify this analysis.", status=403)
+        return _json_error(
+            "Could not process",
+            "You do not have permission to modify this analysis.",
+            status=403,
+        )
 
     return _execution_process_response(execution, created=created)
 
@@ -342,14 +361,15 @@ def result(request: HttpRequest, technology: str = "5G") -> HttpResponse:
     if not analysis or not analysis.pre_check:
         return redirect(reverse("ep_import:site_cells", kwargs={"technology": technology or "5G"}))
 
-    snapshot = get_precheck_snapshot(analysis.id)
+    consolidated = build_from_analysis(analysis)
+    snapshot = precheck_source_snapshot(consolidated)
     if not snapshot:
         return redirect(reverse("precheck:import_returns", kwargs={"technology": analysis.technology}))
     if snapshot["status"] == PrecheckResultStatus.EXECUTION_FAILURE:
         return redirect(reverse("precheck:failure", kwargs={"technology": analysis.technology}))
 
     can_mutate = can_mutate_analysis(request.user, analysis)
-    pos_snapshot = get_poscheck_snapshot(analysis.id) if analysis.full_check else None
+    pos_snapshot = poscheck_source_snapshot(consolidated) if analysis.full_check else None
     context = {
         **_analysis_context(analysis, can_mutate=can_mutate),
         "snapshot": _display_snapshot(snapshot),
@@ -367,7 +387,8 @@ def failure(request: HttpRequest, technology: str = "5G") -> HttpResponse:
     if not analysis or not analysis.pre_check:
         return redirect(reverse("ep_import:site_cells", kwargs={"technology": technology or "5G"}))
 
-    snapshot = get_precheck_snapshot(analysis.id)
+    consolidated = build_from_analysis(analysis)
+    snapshot = precheck_source_snapshot(consolidated)
     if not snapshot:
         return redirect(reverse("precheck:import_returns", kwargs={"technology": analysis.technology}))
     if snapshot["status"] != PrecheckResultStatus.EXECUTION_FAILURE:
@@ -377,6 +398,8 @@ def failure(request: HttpRequest, technology: str = "5G") -> HttpResponse:
     context = {
         **_analysis_context(analysis, can_mutate=can_mutate),
         "snapshot": _display_snapshot(snapshot),
-        "run_again_url": reverse("precheck:process", kwargs={"technology": analysis.technology}) if can_mutate else "",
+        "run_again_url": (
+            reverse("precheck:process", kwargs={"technology": analysis.technology}) if can_mutate else ""
+        ),
     }
     return render(request, "precheck/failure.html", context)

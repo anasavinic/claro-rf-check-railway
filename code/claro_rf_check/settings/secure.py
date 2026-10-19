@@ -43,7 +43,11 @@ def apply_secure_settings(config):
     if config.get("CORE_CONNECT_SSO_DEV") or env_bool("CORE_CONNECT_SSO_DEV"):
         raise ImproperlyConfigured("CORE_CONNECT_SSO_DEV cannot be enabled in staging/production.")
 
-    for name in ("CORE_CONNECT_SSO_ISSUER", "CORE_CONNECT_SSO_CLIENT_ID", "CORE_CONNECT_SSO_REDIRECT_URI"):
+    for name in (
+        "CORE_CONNECT_SSO_ISSUER",
+        "CORE_CONNECT_SSO_CLIENT_ID",
+        "CORE_CONNECT_SSO_REDIRECT_URI",
+    ):
         if not (config.get(name) or "").strip():
             raise ImproperlyConfigured(f"{name} is required in staging/production.")
         config[name] = config[name].strip()

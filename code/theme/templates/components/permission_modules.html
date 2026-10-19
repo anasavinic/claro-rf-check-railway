@@ -1,0 +1,57 @@
+{# Expects: permission_modules, selected_perm_ids, input_name. Optional: grid_class, readonly #}
+<div class="perm-picker-grid {{ grid_class|default:'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' }}">
+	{% for module in permission_modules %}
+	<div
+		class="perm-module-card border border-thin-gray rounded-xl bg-white p-4 flex flex-col gap-3 transition-colors{% if not readonly %} hover:border-primary/40{% endif %}"
+		data-module="{{ module.model }}"
+		data-label="{{ module.label|lower }}"
+	>
+		<div class="perm-check-row pb-2 border-b border-thin-gray flex items-center justify-between gap-2">
+			<span class="font-poppins font-semibold text-sm text-dark-blue truncate" title="{{ module.label }}">
+				{{ module.label }}
+			</span>
+			{% if not readonly %}
+			<label class="inline-flex items-center gap-1.5 cursor-pointer shrink-0">
+				<span class="text-xs font-poppins text-muted select-none">All</span>
+				<input
+					type="checkbox"
+					class="sr-only peer module-select-all"
+					data-module="{{ module.model }}"
+					aria-label="Select all {{ module.label }}"
+				>
+				<span class="checkbox-box" aria-hidden="true">
+					<svg class="checkbox-tick" width="12" height="12" viewBox="0 0 12 12" fill="none">
+						<path d="M2.5 6.2L4.8 8.5L9.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+					</svg>
+				</span>
+			</label>
+			{% endif %}
+		</div>
+		<div class="flex flex-col gap-1">
+			{% for row in module.rows %}
+			<label
+				class="perm-row perm-check-row flex items-center justify-between gap-2 py-1.5 px-1 rounded-lg transition-colors{% if readonly %} pointer-events-none{% else %} cursor-pointer hover:bg-light-blue/60{% endif %}"
+				data-label="{{ row.label|lower }}"
+				title="{{ row.perm.name }}"
+			>
+				<span class="text-sm font-poppins text-dark-blue capitalize min-w-0 truncate">{{ row.label }}</span>
+				<input
+					type="checkbox"
+					{% if not readonly %}name="{{ input_name }}"{% endif %}
+					value="{{ row.perm.pk }}"
+					class="sr-only peer perm-checkbox"
+					data-module="{{ module.model }}"
+					{% if row.perm.pk in selected_perm_ids %}checked{% endif %}
+					{% if readonly %}disabled{% endif %}
+				>
+				<span class="checkbox-box shrink-0" aria-hidden="true">
+					<svg class="checkbox-tick" width="12" height="12" viewBox="0 0 12 12" fill="none">
+						<path d="M2.5 6.2L4.8 8.5L9.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+					</svg>
+				</span>
+			</label>
+			{% endfor %}
+		</div>
+	</div>
+	{% endfor %}
+</div>

@@ -143,33 +143,40 @@
 				<p class="text-[12px] leading-snug text-secondary">Upload a new Gerência return and reprocess this analysis without changing the EP selection.</p>
 			</a>
 			{% endif %}
-			<div class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1">
+			<div class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1"
+			     :class="emailBusy ? 'opacity-70' : ''">
 				<div class="flex items-center gap-2">
-					<p class="flex-1 font-bold text-[14px] text-dark-blue">Prepare Email</p>
+					<p class="flex-1 font-bold text-[14px] text-dark-blue" x-text="emailTitle">Prepare Email</p>
 					<div class="bg-background flex items-center justify-center rounded-lg size-8 shrink-0">
-						<img src="{% static 'ep_import/icons/mail.svg' %}" alt="" class="size-[18px]">
+						<div x-show="emailBusy" x-cloak class="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+						<img x-show="!emailBusy" src="{% static 'ep_import/icons/mail.svg' %}" alt="" class="size-[18px]">
 					</div>
 				</div>
-				<p class="text-[12px] leading-snug text-secondary">Generate an editable email template based on the results of this analysis.</p>
+				<p class="text-[12px] leading-snug text-secondary" x-text="emailHint">Generate an editable email template based on the results of this analysis.</p>
 				<div class="flex gap-2">
 					<button type="button"
 					        @click="prepareEmail('eml')"
-					        class="px-2.5 py-1 rounded-md border border-thin-gray text-[12px] font-medium text-secondary cursor-pointer hover:border-primary hover:text-primary">.eml</button>
+					        :disabled="downloadBusy"
+					        class="px-2.5 py-1 rounded-md border border-thin-gray text-[12px] font-medium text-secondary cursor-pointer hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed">.eml</button>
 					<button type="button"
 					        @click="prepareEmail('msg')"
-					        class="px-2.5 py-1 rounded-md border border-thin-gray text-[12px] font-medium text-secondary cursor-pointer hover:border-primary hover:text-primary">.msg</button>
+					        :disabled="downloadBusy"
+					        class="px-2.5 py-1 rounded-md border border-thin-gray text-[12px] font-medium text-secondary cursor-pointer hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed">.msg</button>
 				</div>
 			</div>
-			<a href="{{ export_url }}"
-			   class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1 hover:border-primary transition-colors">
+			<button type="button"
+			        @click="exportReport"
+			        :disabled="downloadBusy"
+			        class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1 hover:border-primary transition-colors text-left disabled:opacity-70 disabled:cursor-wait">
 				<div class="flex items-center gap-2">
-					<p class="flex-1 font-bold text-[14px] text-dark-blue">Export Report</p>
+					<p class="flex-1 font-bold text-[14px] text-dark-blue" x-text="exportTitle">Export Report</p>
 					<div class="bg-background flex items-center justify-center rounded-lg size-8 shrink-0">
-						<img src="{% static 'ep_import/icons/download.svg' %}" alt="" class="size-[18px]">
+						<div x-show="exportBusy" x-cloak class="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+						<img x-show="!exportBusy" src="{% static 'ep_import/icons/download.svg' %}" alt="" class="size-[18px]">
 					</div>
 				</div>
-				<p class="text-[12px] leading-snug text-secondary">Download the generated analysis files.</p>
-			</a>
+				<p class="text-[12px] leading-snug text-secondary" x-text="exportHint">Download the generated analysis files.</p>
+			</button>
 			<a href="{{ config_url }}"
 			   class="bg-white border border-thin-gray rounded-lg p-4 flex flex-col gap-2.5 flex-1 hover:border-primary transition-colors">
 				<div class="flex items-center gap-2">

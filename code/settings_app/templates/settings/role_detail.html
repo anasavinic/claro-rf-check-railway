@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ object.name }} — Roles{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen">
+	{% include "ep_import/partials/sidebar.html" %}
+	<div class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8">
+		{% include "components/flash_messages.html" %}
+
+		<div class="flex items-end justify-between gap-4 w-full">
+			<div class="flex flex-col gap-1 items-start flex-1 min-w-0">
+				<p class="font-normal text-[11px] uppercase text-muted w-full">Home &gt; Settings &gt; Roles &gt; Detail</p>
+				<p class="font-semibold text-[20px] text-dark-blue w-full">{{ object.name }}</p>
+				<p class="font-normal text-[13px] text-secondary w-full">{{ permissions_count }} permission(s) · {{ users_count }} user(s)</p>
+			</div>
+			<div class="flex items-center gap-2 shrink-0">
+				{% if can_update_roles %}
+				<a href="{% url 'settings:roles-update' object.pk %}" class="settings-btn-primary">Edit</a>
+				{% endif %}
+				{% if can_delete_roles %}
+				<a href="{% url 'settings:roles-delete' object.pk %}" class="settings-btn-danger">Delete</a>
+				{% endif %}
+			</div>
+		</div>
+
+		<div class="settings-card-pad">
+			<div class="flex flex-col gap-1 mb-4">
+				<p class="font-semibold text-[14px] text-dark-blue">Permissions</p>
+				<p class="font-normal text-[12px] text-muted">Modules and actions granted by this role.</p>
+			</div>
+			{% if permission_modules %}
+			{% include "components/permission_modules.html" with input_name="permissions" readonly=True grid_class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" %}
+			{% else %}
+			<div class="rounded-xl border border-dashed border-thin-gray bg-background px-4 py-8 text-center">
+				<p class="text-[13px] text-muted">No permissions assigned to this role.</p>
+			</div>
+			{% endif %}
+		</div>
+	</div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Delete Role — Claro RF Check{% endblock %}
+
+{% block content %}
+<div class="bg-background flex items-start min-h-screen">
+	{% include "ep_import/partials/sidebar.html" %}
+	<div class="bg-background flex flex-1 flex-col gap-6 min-w-0 p-8">
+		{% include "components/settings_page_header.html" with breadcrumb="Home > Settings > Roles > Delete" title="Delete role" subtitle="This removes the group. Users keep any individual permissions." %}
+
+		<div class="settings-card-pad max-w-xl flex flex-col gap-5">
+			<div class="flex items-start gap-3 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3">
+				<img src="{% static 'ep_import/icons/alert-circle.svg' %}" alt="" class="size-5 shrink-0 mt-0.5">
+				<p class="font-normal text-[13px] text-secondary">
+					Are you sure you want to delete role
+					<strong class="text-dark-blue">{{ object.name }}</strong>?
+					This cannot be undone.
+				</p>
+			</div>
+			<form method="post" class="flex items-center justify-end gap-3">
+				{% csrf_token %}
+				<a href="{% url 'settings:roles-list' %}" class="settings-btn-secondary">Cancel</a>
+				<button type="submit" class="settings-btn-danger-solid">Delete role</button>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}

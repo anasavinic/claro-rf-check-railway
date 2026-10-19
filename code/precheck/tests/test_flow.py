@@ -107,7 +107,10 @@ def test_upload_and_process_precheck_happy_path(auth_client):
     assert upload.json()["type"] == "Success"
     assert CheckReturnFile.objects.filter(analysis=analysis, check_type=CheckType.PRECHECK).exists()
 
-    process = auth_client.post(reverse("precheck:process", kwargs={"technology": "5G"}), HTTP_ACCEPT="application/json")
+    process = auth_client.post(
+        reverse("precheck:process", kwargs={"technology": "5G"}),
+        HTTP_ACCEPT="application/json",
+    )
     assert process.status_code == 200
     body = process.json()
     assert body["redirect_url"] == reverse("precheck:result", kwargs={"technology": "5G"})
@@ -124,7 +127,7 @@ def test_upload_and_process_precheck_happy_path(auth_client):
     assert b"4151041" in result_page.content
     assert b"precheck-validations-data" in result_page.content
     assert b"Replace MML return" in result_page.content
-    assert f'href="{reverse("reports:export", kwargs={"analysis_id": analysis.id})}"'.encode() in result_page.content
+    assert b'@click="exportReport"' in result_page.content
     assert b"Coming soon" not in result_page.content
 
 
@@ -141,7 +144,8 @@ def test_replace_return_resets_and_allows_reprocess(auth_client):
     )
     assert (
         auth_client.post(
-            reverse("precheck:process", kwargs={"technology": "5G"}), HTTP_ACCEPT="application/json"
+            reverse("precheck:process", kwargs={"technology": "5G"}),
+            HTTP_ACCEPT="application/json",
         ).status_code
         == 200
     )
@@ -165,7 +169,10 @@ def test_replace_return_resets_and_allows_reprocess(auth_client):
     assert analysis.status == CheckAnalysisStatus.AWAITING_RETURNS
     assert not PrecheckResult.objects.filter(analysis=analysis).exists()
 
-    process = auth_client.post(reverse("precheck:process", kwargs={"technology": "5G"}), HTTP_ACCEPT="application/json")
+    process = auth_client.post(
+        reverse("precheck:process", kwargs={"technology": "5G"}),
+        HTTP_ACCEPT="application/json",
+    )
     assert process.status_code == 200
     assert process.json()["redirect_url"] == reverse("precheck:result", kwargs={"technology": "5G"})
     analysis.refresh_from_db()
@@ -186,7 +193,8 @@ def test_process_while_busy_returns_conflict(auth_client):
     analysis.save(update_fields=["status", "updated_at"])
 
     response = auth_client.post(
-        reverse("precheck:process", kwargs={"technology": "5G"}), HTTP_ACCEPT="application/json"
+        reverse("precheck:process", kwargs={"technology": "5G"}),
+        HTTP_ACCEPT="application/json",
     )
     assert response.status_code == 409
     assert "already" in response.json()["message"].lower()
@@ -228,7 +236,10 @@ def test_staff_cannot_mutate_another_users_analysis(auth_client):
     )
     assert upload.status_code == 403
 
-    process = auth_client.post(reverse("precheck:process", kwargs={"technology": "5G"}), HTTP_ACCEPT="application/json")
+    process = auth_client.post(
+        reverse("precheck:process", kwargs={"technology": "5G"}),
+        HTTP_ACCEPT="application/json",
+    )
     assert process.status_code == 403
 
 
@@ -238,7 +249,8 @@ def test_process_without_upload_is_rejected(auth_client):
     _start_precheck(auth_client, job)
 
     response = auth_client.post(
-        reverse("precheck:process", kwargs={"technology": "5G"}), HTTP_ACCEPT="application/json"
+        reverse("precheck:process", kwargs={"technology": "5G"}),
+        HTTP_ACCEPT="application/json",
     )
     assert response.status_code == 400
     assert response.json()["type"] == "Error"
@@ -254,7 +266,10 @@ def test_process_failure_redirects_to_failure_page(auth_client):
         {"file": SimpleUploadedFile("bad.txt", b"not a gerencia return", content_type="text/plain")},
         HTTP_ACCEPT="application/json",
     )
-    process = auth_client.post(reverse("precheck:process", kwargs={"technology": "5G"}), HTTP_ACCEPT="application/json")
+    process = auth_client.post(
+        reverse("precheck:process", kwargs={"technology": "5G"}),
+        HTTP_ACCEPT="application/json",
+    )
     assert process.status_code == 200
     assert process.json()["redirect_url"] == reverse("precheck:failure", kwargs={"technology": "5G"})
 

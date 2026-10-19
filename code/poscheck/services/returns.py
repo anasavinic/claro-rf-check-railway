@@ -11,7 +11,12 @@ from django.utils import timezone
 from ep_import.services.content import sha256_file
 from poscheck.models import PoscheckResult
 from poscheck.services.errors import PoscheckError, analysis_busy
-from precheck.models import CheckAnalysis, CheckAnalysisStatus, CheckReturnFile, CheckType
+from precheck.models import (
+    CheckAnalysis,
+    CheckAnalysisStatus,
+    CheckReturnFile,
+    CheckType,
+)
 from precheck.services.returns import validate_return_upload
 
 _RESET_AFTER_REPLACE = frozenset(

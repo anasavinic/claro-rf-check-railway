@@ -13,8 +13,15 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from claro_rf_check.celery_dispatch import (
+    BROKER_UNAVAILABLE_CODE,
+    BROKER_UNAVAILABLE_MESSAGE,
+    BROKER_UNAVAILABLE_TITLE,
+    broker_dispatch_errors,
+    delay_task,
+)
 from ep_import.forms import EpUploadForm
-from ep_import.models import EpCell, ImportJob, ImportJobStatus
+from ep_import.models import EpCell, ImportJob, ImportJobStatus, ImportStage
 from ep_import.schema import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MAX_UPLOAD_BYTES, Technology
 from ep_import.services.authorization import can_mutate_job, get_authorized_job, mutable_job, visible_job
 from ep_import.services.content import sha256_file
@@ -149,7 +156,7 @@ def _workspace_context(job: ImportJob | None, technology: str) -> dict:
             "page": 1,
             "page_size": DEFAULT_PAGE_SIZE,
             "total": sites_total,
-            "page_count": max(1, (sites_total + DEFAULT_PAGE_SIZE - 1) // DEFAULT_PAGE_SIZE) if sites_total else 1,
+            "page_count": (max(1, (sites_total + DEFAULT_PAGE_SIZE - 1) // DEFAULT_PAGE_SIZE) if sites_total else 1),
             "has_next": sites_total > DEFAULT_PAGE_SIZE,
             "has_prev": False,
             "url": (
@@ -366,7 +373,9 @@ def _saved_script_context(request: HttpRequest) -> dict | None:
                 if analysis.full_check
                 else ""
             ),
-            "import_returns_url": reverse("precheck:import_returns", kwargs={"technology": tech}) if can_import else "",
+            "import_returns_url": (
+                reverse("precheck:import_returns", kwargs={"technology": tech}) if can_import else ""
+            ),
             "can_import": can_import,
             "can_mutate": can_mutate,
             "precheck_return": precheck_file,
@@ -374,13 +383,15 @@ def _saved_script_context(request: HttpRequest) -> dict | None:
             "full_check_return": full_check_file,
             "has_full_check_return": full_check_file is not None,
             "max_return_mb": MAX_RETURN_UPLOAD_BYTES // (1024 * 1024),
-            "upload_precheck_url": reverse("precheck:upload_precheck_return", kwargs={"technology": tech})
-            if can_import and analysis.pre_check
-            else "",
+            "upload_precheck_url": (
+                reverse("precheck:upload_precheck_return", kwargs={"technology": tech})
+                if can_import and analysis.pre_check
+                else ""
+            ),
             "upload_full_check_url": (
                 reverse("poscheck:upload_full_check_return") if can_import and analysis.full_check else ""
             ),
-            "process_url": reverse("precheck:process", kwargs={"technology": tech}) if can_import else "",
+            "process_url": (reverse("precheck:process", kwargs={"technology": tech}) if can_import else ""),
         }
 
     selection = request.session.get("check_script_selection")
@@ -429,7 +440,7 @@ def _saved_script_context(request: HttpRequest) -> dict | None:
             if full_check
             else ""
         ),
-        "import_returns_url": reverse("precheck:import_returns", kwargs={"technology": tech}) if can_import else "",
+        "import_returns_url": (reverse("precheck:import_returns", kwargs={"technology": tech}) if can_import else ""),
         "can_import": False,
         "can_mutate": False,
         "precheck_return": None,
@@ -448,7 +459,12 @@ def _saved_script_context(request: HttpRequest) -> dict | None:
 def scripts(request: HttpRequest, technology: str = "5G") -> HttpResponse:
     context = _saved_script_context(request)
     if not context:
-        return redirect(reverse("ep_import:site_cells", kwargs={"technology": technology or Technology.G5.value}))
+        return redirect(
+            reverse(
+                "ep_import:site_cells",
+                kwargs={"technology": technology or Technology.G5.value},
+            )
+        )
     return render(request, "ep_import/scripts.html", context)
 
 
@@ -457,7 +473,12 @@ def scripts(request: HttpRequest, technology: str = "5G") -> HttpResponse:
 def download_script(request: HttpRequest, technology: str, check_type: str) -> HttpResponse:
     context = _saved_script_context(request)
     if not context:
-        return redirect(reverse("ep_import:site_cells", kwargs={"technology": technology or Technology.G5.value}))
+        return redirect(
+            reverse(
+                "ep_import:site_cells",
+                kwargs={"technology": technology or Technology.G5.value},
+            )
+        )
 
     if check_type == "precheck" and context["pre_check"]:
         content = context["precheck_script"]
@@ -508,12 +529,30 @@ def upload_ep(request: HttpRequest) -> HttpResponse:
     job, created = _job_for_upload(request.user, uploaded, digest)
     request.session["ep_import_job_id"] = str(job.id)
     if created or (job.status == ImportJobStatus.PENDING and not job.task_id):
-        process_ep_import.delay(str(job.id))
+        try:
+            delay_task(process_ep_import, str(job.id))
+        except broker_dispatch_errors():
+            job.status = ImportJobStatus.FAILED
+            job.stage = ImportStage.FAILED
+            job.error_title = BROKER_UNAVAILABLE_TITLE
+            job.issues = [
+                {
+                    "code": BROKER_UNAVAILABLE_CODE,
+                    "message": BROKER_UNAVAILABLE_MESSAGE,
+                    "sheet": None,
+                    "column": None,
+                    "row": None,
+                    "severity": "error",
+                }
+            ]
+            job.finished_at = timezone.now()
+            job.save(update_fields=["status", "stage", "error_title", "issues", "finished_at"])
     job.refresh_from_db()
 
     redirect_url = reverse("ep_import:site_cells", kwargs={"technology": technology}) + f"?job={job.id}"
     if job.status == ImportJobStatus.FAILED:
         message = job.issues[0]["message"] if job.issues else "The file could not be imported."
+        status_code = 503 if (job.issues and job.issues[0].get("code") == BROKER_UNAVAILABLE_CODE) else 400
         if _wants_json(request) or getattr(request, "htmx", False):
             return JsonResponse(
                 {
@@ -522,7 +561,7 @@ def upload_ep(request: HttpRequest) -> HttpResponse:
                     "message": message,
                     "job": _job_status_payload(job),
                 },
-                status=400,
+                status=status_code,
             )
         return redirect(redirect_url)
 
@@ -531,7 +570,10 @@ def upload_ep(request: HttpRequest) -> HttpResponse:
     elif created:
         title, message = "Import started", "Processing EP file…"
     else:
-        title, message = "Import already started", "This file is already being processed."
+        title, message = (
+            "Import already started",
+            "This file is already being processed.",
+        )
 
     payload = {
         "type": "Success",
@@ -581,7 +623,13 @@ def job_sites(request: HttpRequest, job_id) -> HttpResponse:
     search = (request.GET.get("q") or "").strip()
     page, page_size = _page_params(request)
     sites, sites_total = sites_page(job, technology, search, page, page_size)
-    pager = _pager(request, page=page, page_size=page_size, total=sites_total, target="#sites-results")
+    pager = _pager(
+        request,
+        page=page,
+        page_size=page_size,
+        total=sites_total,
+        target="#sites-results",
+    )
 
     if getattr(request, "htmx", False):
         return render(
@@ -634,7 +682,13 @@ def job_cells(request: HttpRequest, job_id) -> HttpResponse:
         for row in qs.order_by("cell_name")[offset : offset + page_size]:
             raw = row.raw or {}
             cells.append(_cell_payload(row, raw))
-    pager = _pager(request, page=page, page_size=page_size, total=cells_total, target="#cells-results")
+    pager = _pager(
+        request,
+        page=page,
+        page_size=page_size,
+        total=cells_total,
+        target="#cells-results",
+    )
 
     context = {
         "job": job,
